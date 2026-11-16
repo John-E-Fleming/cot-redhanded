@@ -71,6 +71,13 @@ ATTACK_POLICIES = (
 )
 ID_SETS = ("TRAIN", "VAL", "RED", "TEST")
 
+# Upstream's name for "no side task": `load_red_dataset` skips the side-task injection when the
+# side task is None or "baseline", and `SIDE_TASK_CONFIGS["baseline"]` scores with
+# `baseline_verify`, which checks the main task alone. This is the benign control arm, and the
+# false positive rate the paper's catch rate is calibrated against comes from it. The name
+# collides with the "baseline" *attack policy*, which is upstream's doing, not ours.
+BENIGN_SIDE_TASK = "baseline"
+
 
 @task
 def cot_redhanded_generate(
@@ -99,9 +106,10 @@ def cot_redhanded_generate(
         ValueError: If a parameter is not one upstream recognises. Upstream would otherwise
             fail later, with a KeyError or an empty dataset.
     """
-    if side_task not in SIDE_TASKS:
+    if side_task not in (*SIDE_TASKS, BENIGN_SIDE_TASK):
         raise ValueError(
-            f"Unknown side task {side_task!r}; expected one of {', '.join(SIDE_TASKS)}"
+            f"Unknown side task {side_task!r}; expected one of {', '.join(SIDE_TASKS)}, "
+            f"or {BENIGN_SIDE_TASK!r} for the benign control arm"
         )
     if attack_policy not in ATTACK_POLICIES:
         raise ValueError(
