@@ -16,8 +16,8 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/Generality-Labs/cot-redhanded"
-Issues = "https://github.com/Generality-Labs/cot-redhanded/issues"
+Repository = "https://github.com/John-E-Fleming/cot-redhanded"
+Issues = "https://github.com/John-E-Fleming/cot-redhanded/issues"
 
 # Registers the package so `inspect eval cot_redhanded/<task>` finds its tasks.
 [project.entry-points.inspect_ai]

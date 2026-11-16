@@ -6,7 +6,7 @@ author_email: jfleming9317@gmail.com
 author_name: John-E-Fleming
 eval_description: Stress testing chain-of-thought monitoring
 eval_name: cot-redhanded
-github_owner: Generality-Labs
+github_owner: John-E-Fleming
 github_username: John-E-Fleming
 include_examples: true
 include_llm_judge_example: false
