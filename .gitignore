@@ -44,3 +44,9 @@ agent_artefacts/trajectory_analysis/inspect_scout/__pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Upstream cot_red_handed writes this cross-run cache into the working directory
+completed_ids/
+
+# Inspect Scout writes here when run without an explicit -o
+scout_results/
