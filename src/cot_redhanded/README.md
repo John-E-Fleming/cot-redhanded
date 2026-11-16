@@ -1,6 +1,14 @@
-# cot-redhanded
+# CoT Red-Handed: Stress Testing Chain-of-Thought Monitoring
 
-Stress testing chain-of-thought monitoring
+Stress tests chain-of-thought monitoring as an AI control measure. A weaker trusted monitor reads a
+stronger untrusted model's reasoning trace and final code to detect sabotage hidden alongside a
+legitimate coding task, and is compared against an action-only monitor that sees the code alone and a
+hybrid protocol that scores reasoning and actions independently before combining them. Monitors are
+compared by catch rate at a 1% false positive rate, calibrated against benign completions.
+
+Based on [CoT Red-Handed: Stress Testing Chain-of-Thought Monitoring](https://arxiv.org/abs/2505.23575)
+(Arnav et al., NeurIPS 2025), with the [reference implementation](https://github.com/cotredhanded/code)
+as the comparison point.
 
 <!-- Contributors: Automatically Generated -->
 Contributed by [@John-E-Fleming](https://github.com/John-E-Fleming)
