@@ -10,8 +10,22 @@ contributors:
   - John-E-Fleming
 version: "1-A"
 tasks:
-  - name: cot_redhanded
-    dataset_samples: 2 # placeholder: the skeleton dataset, replaced when the loader lands
+  - name: cot_redhanded_generate
+    dataset_samples: 855 # the TEST split at the default side task and attack policy
+    comment: >-
+      Produces the transcripts the monitor scores. Measures the untrusted model's ability to
+      complete a hidden side task alongside the main one, not a monitor's ability to catch it.
+  - name: cot_redhanded_monitor
+    comment: >-
+      The eval proper: a trusted monitor scores reasoning and actions for suspicion. Sample
+      count depends on the generation log it is given, since only completions that passed both
+      the main and the side task are monitored.
+metadata:
+  sandbox:
+    - solver
+    - scorer
+  requires:
+    internet: true
 external_assets:
   - type: huggingface
     source: bigcode/bigcodebench

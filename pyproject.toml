@@ -13,6 +13,7 @@ requires-python = ">=3.12"
 dependencies = [
     "inspect_ai>=0.3.262",
     "inspect-evals-utils[huggingface]==0.3.0",
+    "cot-red-handed",
 ]
 
 [project.urls]
@@ -111,3 +112,6 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "**/{tests,examples}/**" = ["D", "PLR2004"] # tests and examples skip docstring linting
+
+[tool.uv.sources]
+cot-red-handed = { git = "https://github.com/cotredhanded/code", rev = "505d9fca6fc5b859492d8b9500b374c8cbf501e8" }
