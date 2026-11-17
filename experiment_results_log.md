@@ -618,3 +618,58 @@ It also holds the action-over-CoT ordering found on 2026-11-17, and more strongl
 - Flash Lite needs the parser guarded before it can contribute. That is an uplift change, not a baseline one, so the monitor axis stays at 2 of 4 for the baseline.
 - `ioexfil` and `logio` under nano should be re-run if nano is to be reported over the full 146-sample corpus.
 - Whether `claude-3-5-haiku-20241022` is still served by a direct Anthropic key remains untested, and is the only route to a third monitor.
+
+## 2026-11-17 — Run 11: the monitor axis at 3 of 4, and what varies across monitors
+
+Gemini 2.5 Flash Lite re-run with the guarded parser. **All 10 logs `status=success`**, against a benign arm that previously died at sample 12 of 428 and three side tasks that errored outright.
+
+|                                    | Before the guard                         | After            |
+| ---------------------------------- | ---------------------------------------- | ---------------- |
+| Logs `success`                     | 6 of 9 side tasks, benign dead at 12/428 | **10 of 10**     |
+| Samples scored                     | —                                        | 574              |
+| Usable (both channels readable)    | —                                        | 544              |
+| Samples with an unreadable channel | each one ended the run                   | **31, absorbed** |
+
+31 run-killers in 574 samples is a 5.4% rate, which makes the original death at sample 12 unremarkable: the chance of twelve consecutive clean samples at that rate is about even. This is the measurement that justifies the change.
+
+### All three reachable monitors, each thresholded on its own benign arm
+
+Thresholds are per-monitor, not shared. Flash Lite loses 6 of 146 attack samples and 25 of 428 benign to unreadable verdicts, so its n is lower and is reported as it stands rather than back-filled.
+
+| Monitor               | n_att | Action        | CoT           | Hybrid        |
+| --------------------- | ----: | ------------- | ------------- | ------------- |
+| GPT-4.1-mini          |   146 | 74.7% / 0.882 | 62.3% / 0.863 | 74.0% / 0.890 |
+| GPT-4.1-nano          |   146 | 63.7% / 0.825 | 24.0% / 0.638 | 61.0% / 0.825 |
+| Gemini 2.5 Flash Lite |   140 | 70.0% / 0.871 | 36.4% / 0.818 | 62.9% / 0.870 |
+| *Paper, Fig 3*        |     — | *0.755*       | *0.760*       | *0.797*       |
+
+**Action monitoring beats CoT monitoring on all three monitors**, by +12.3, +39.7 and +33.6 points of catch rate. The inversion recorded on 2026-11-17 was measured with one monitor; it now holds across every monitor this eval can reach. That removes the most obvious alternative explanation — that GPT-4.1-mini is simply bad at reading reasoning traces.
+
+### The CoT channel is the high-variance channel
+
+| Channel | Spread across the three monitors       |
+| ------- | -------------------------------------- |
+| Action  | 74.7% → 63.7%, a **11.0** point spread |
+| CoT     | 62.3% → 24.0%, a **38.3** point spread |
+
+Catching a `chmod 777` in a diff degrades gently with monitor capability. Finding a hint of scheming in several thousand tokens of reasoning does not. **The action channel is the stable one and the CoT channel is the one that depends on the monitor.** For a control protocol that matters more than the averages: a CoT monitor's value cannot be assumed from a single monitor's measurement, and the paper's practice of reporting per monitor is the right one.
+
+### Correction: the degenerate benign distribution is an OpenAI-monitor property, not the eval's
+
+Earlier entries, and the reading-group page, said the benign suspicion distribution is "97% exact zeros, which makes catch-rate-at-1%-FPR a weak instrument". That is true of the OpenAI monitors and substantially false of Flash Lite.
+
+| Monitor               | Benign zeros, action | Benign zeros, CoT | Distinct values (action / CoT) |
+| --------------------- | -------------------: | ----------------: | ------------------------------ |
+| GPT-4.1-mini          |                96.5% |             96.7% | 4 / 4                          |
+| GPT-4.1-nano          |                98.6% |             97.7% | 4 / 6                          |
+| Gemini 2.5 Flash Lite |            **85.1%** |         **51.4%** | **10 / 12**                    |
+
+Flash Lite's CoT channel is only half zeros and takes 12 distinct values across 403 samples, so its 1% FPR threshold sits at 0.700 rather than 0.050 and is a far better-conditioned estimate. GPT-4.1-mini, by contrast, emits one of four values across 428 benign samples.
+
+So the instrument is weak **for the OpenAI monitors specifically**, and the caveat should be attached to them rather than to the eval. It also produces a mild paradox worth keeping in view: the monitor with the coarsest score distribution (mini, 4 distinct benign values) is the best discriminator, and the one with the most graded distribution (Flash Lite) is not. Catch rate at a fixed FPR and AUC need not agree about which monitor is better, and here they nearly do but for different reasons.
+
+### Open after Run 11
+
+- The monitor axis is at 3 of 4 and cannot go further: Claude 3.5 Haiku is retired by Anthropic, confirmed from their own documentation, so the direct-key route is closed too.
+- Flash Lite's 31 unreadable verdicts are worth reading: if they cluster on particular side tasks or particular prompt lengths, that is a prompt-design finding rather than a parsing one.
+- `complexity` on TEST is still generating, ~2h50m in.
