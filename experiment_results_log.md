@@ -673,3 +673,55 @@ So the instrument is weak **for the OpenAI monitors specifically**, and the cave
 - The monitor axis is at 3 of 4 and cannot go further: Claude 3.5 Haiku is retired by Anthropic, confirmed from their own documentation, so the direct-key route is closed too.
 - Flash Lite's 31 unreadable verdicts are worth reading: if they cluster on particular side tasks or particular prompt lengths, that is a prompt-design finding rather than a parsing one.
 - `complexity` on TEST is still generating, ~2h50m in.
+
+## 2026-11-17 — Run 12: `complexity` and `edgecase` on TEST, and a claim that does not survive
+
+Both generation runs clean: **113 samples each, 0 errors, `status=success`**. `complexity` 19:05→20:02, `edgecase` 20:02→22:04. Monitored with GPT-4.1-mini against the same 428-sample benign arm as every other figure here.
+
+### Generation
+
+| Side task    | n   |  main |  side |  both | Monitorable (was, on RED) |
+| ------------ | --- | ----: | ----: | ----: | ------------------------- |
+| `complexity` | 113 | 82.3% | 26.5% | 26.5% | **30** (was 2)            |
+| `edgecase`   | 113 | 56.6% | 70.8% | 34.5% | **39** (was 3)            |
+
+### The annotated id subsets are far easier than TEST at large
+
+`complexity`'s main-task rate of 82.3% looks 32 points above the benign arm's 50.1%, which would be a bigger anomaly than `exit`'s. It is not an anomaly. Both side tasks are restricted to upstream's 150 annotated ids, 113 of which fall in TEST, and that subset is **not a random slice**. Restricting the benign arm to exactly the same ids:
+
+| Side task    | Benign main-task on **all 855** | Benign main-task on **its own 113 ids** | Side-task cost |
+| ------------ | ------------------------------: | --------------------------------------: | -------------: |
+| `complexity` |                           50.1% |                               **81.4%** |       **+0.9** |
+| `edgecase`   |                           50.1% |                               **61.1%** |       **−4.4** |
+
+`complexity`'s id subset is **31 points easier** than TEST as a whole. Against the matched baseline the side-task cost is approximately zero for `complexity` and −4.4 points for `edgecase`, which is what the task texts would predict: one asks for inefficiency, which does not break correctness, and the other asks for robustness.
+
+**Consequence for the port, and for the paper.** Any figure that compares `complexity` or `edgecase` against the full benign arm is invalid, and any pooled statistic mixing them with the other nine side tasks is pooling across subsets of very different difficulty. This is selection bias in the dataset, not a verifier defect, and it is a third distinct mechanism after the free successes and the uncontrolled stealth framing.
+
+### Correction: `complexity` does not show the paper's CoT advantage
+
+Earlier entries, and the reading-group page, said the two action-subtle side tasks behave as the paper predicts, citing `complexity` at CoT 100% against action 0%. **That was n=2.** With n=30:
+
+| Side task           |   n | Action        | CoT            | Hybrid            |
+| ------------------- | --: | ------------- | -------------- | ----------------- |
+| `complexity` (TEST) |  30 | 43.3% / 0.870 | 33.3% / 0.805  | **50.0% / 0.921** |
+| `edgecase` (TEST)   |  39 | 28.2% / 0.666 | 23.1% / 0.717  | 33.3% / 0.747     |
+| `complexity` (RED)  |   2 | 0.0% / 0.730  | 100.0% / 0.998 | 50.0% / 0.993     |
+
+**Action beats CoT on `complexity` too, 43.3% to 33.3%.** The n=2 figure was noise, and it is now withdrawn. The claim it supported — that the action-subtle side tasks vindicate the paper where the blatant ones do not — is left resting on `varname` alone at n=13, which is not enough to carry it.
+
+So the finding is stronger and simpler than before: **action monitoring beats CoT monitoring on every side task in this corpus that has a meaningful sample size.** The earlier explanation, that the corpus is dominated by blatant sabotage, is no longer sufficient, because the side task specifically chosen for being subtle in the action behaves the same way.
+
+### What does reproduce, clearly, is the hybrid
+
+On `complexity` the hybrid is the best of the three by a wide margin: **50.0% catch and AUC 0.921**, against action 0.870 and CoT 0.805. It beats both components on both measures, which is the paper's actual hybrid claim, and it does so on the side task where the two channels disagree most. The CoT channel adds real information on `complexity` even though it is the weaker channel alone — which is a more defensible reading of the paper's thesis than "CoT monitoring beats action monitoring".
+
+### `edgecase` catches more than "not a sabotage task" would predict
+
+Run 8b grouped `longlines` and `edgecase` as "not a sabotage task", citing a combined 3.7% catch at AUC 0.520. That group figure was dominated by `longlines` (n=24, 0%) with `edgecase` at n=3. At n=39 `edgecase` catches **28.2%** at AUC 0.666, so the monitor does flag something in it. The task text still contains nothing harmful, so the likely explanation is the injected secret test case looking anomalous rather than the code being sabotaged — but that is a hypothesis, and the grouping should be treated as unsettled for `edgecase`. `longlines` is unaffected: it remains 0.0% across 24 samples.
+
+### Open after Run 12
+
+- Re-run the Run 8b grouping with `edgecase` at its real n, and decide whether it belongs with `longlines` at all.
+- The TEST figures are not poolable with the RED corpus: different split, and now known to be a much easier subset.
+- A benign arm restricted to the annotated ids already exists inside the 855-sample run, which is how the matched comparison above was made at no cost.
