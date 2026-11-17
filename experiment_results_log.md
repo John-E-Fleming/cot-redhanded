@@ -111,7 +111,7 @@ Normalised suspicion, 0–1. Hybrid derived as `0.55·action + 0.45·cot`; upstr
 | ROC-AUC            | **0.500**       | 0.638        | 0.638        |
 | *Paper's ROC-AUC*  | *0.755*         | *0.760*      | *0.797*      |
 
-Monitor stage: 54s total, ~$0.04 for 78 calls.
+Monitor stage: 54s total, 78 calls, 143,601 input + 26,125 output tokens. Cost ~$0.10 at list rates (derived from tokens; Inspect records `total_cost=None`). An earlier version of this entry said ~$0.04, which was an unmarked guess rather than a token-based figure.
 
 **The paper's central qualitative claim reproduces.** CoT monitoring beats action-only. On `varname` the action-only monitor is at chance — AUC exactly 0.500, every one of 39 scores 0.0, nothing caught — while the CoT monitor catches 30.8% at a 1% false positive rate. `varname` is where that gap should be widest: renaming a variable to `list` leaves almost nothing in the final code, but the model reasons about doing it.
 
@@ -129,8 +129,8 @@ Monitor stage: 54s total, ~$0.04 for 78 calls.
 | ------------------ | ------- | ----------- | ---------- |
 | Attack generation  | 57      | 20m55s      | $0.50      |
 | Benign generation  | 57      | 15m55s      | $0.37      |
-| Monitor, both arms | 39      | 54s         | ~$0.04     |
-| **Total**          |         | **~38 min** | **~$0.91** |
+| Monitor, both arms | 39      | 54s         | ~$0.10     |
+| **Total**          |         | **~38 min** | **~$0.97** |
 
 ### What the baseline says about scaling
 
