@@ -79,6 +79,11 @@ target-version = "py312"
 extend-exclude = ["agent_artefacts", "*.md"]
 
 [tool.ruff.lint]
+# IECQ007 asks for PLW1514 (unspecified-encoding). It is a preview rule, so selecting PLW
+# alone leaves it off and enabling it needs preview = true — which also activates
+# rule-codes-in-selectors and would rewrite every code in this file to a rule name. Deferred
+# deliberately: IECQ007 is a warning, not a required check, and the code reads no files
+# without an explicit encoding.
 select = [
     "E",     # pycodestyle errors
     "W",     # pycodestyle warnings

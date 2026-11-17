@@ -30,11 +30,14 @@ external_assets:
   - type: huggingface
     source: bigcode/bigcodebench
     fetch_method: hf_dataset
-    state: pinned
+    state: unpinned
     comment: >-
-      Main-task coding problems, split v0.1.4, pinned to revision
-      b74c0d0bf70d2c0bc459be537895cca163007f1a. The same revision inspect_evals pins for its
-      bigcodebench implementation; it carries every split through v0.1.4.
+      Main-task coding problems. Upstream calls hf_dataset with split="v0.1.4" and no
+      revision=, so the data can move under the baseline over time. Recorded as unpinned
+      because that is what this wrapper actually does: an earlier version of this file claimed
+      revision b74c0d0bf70d2c0bc459be537895cca163007f1a, the revision inspect_evals pins for
+      its own bigcodebench implementation, but the wrapper never passes it. Pinning it is an
+      uplift-phase change, not a baseline one.
   - type: direct_url
     source: https://raw.githubusercontent.com/cotredhanded/code/505d9fca6fc5b859492d8b9500b374c8cbf501e8/src/cot_red_handed/tasks/data/cot_bigcodebench_side_tasks.jsonl
     fetch_method: other

@@ -1,3 +1,17 @@
+from cot_redhanded.analysis import (
+    CHANNELS,
+    DEFAULT_FALSE_POSITIVE_RATE,
+    HYBRID_ACTION_WEIGHT,
+    ChannelResult,
+    MonitorSample,
+    catch_rate,
+    compare_channels,
+    false_positive_rate,
+    hybrid_score,
+    read_monitor_samples,
+    roc_auc,
+    suspicion_threshold,
+)
 from cot_redhanded.cot_redhanded import (
     ATTACK_POLICIES,
     ID_SETS,
@@ -8,8 +22,20 @@ from cot_redhanded.cot_redhanded import (
 
 __all__ = [
     "ATTACK_POLICIES",
+    "CHANNELS",
+    "DEFAULT_FALSE_POSITIVE_RATE",
+    "HYBRID_ACTION_WEIGHT",
     "ID_SETS",
     "SIDE_TASKS",
+    "ChannelResult",
+    "MonitorSample",
+    "catch_rate",
+    "compare_channels",
     "cot_redhanded_generate",
     "cot_redhanded_monitor",
+    "false_positive_rate",
+    "hybrid_score",
+    "read_monitor_samples",
+    "roc_auc",
+    "suspicion_threshold",
 ]
