@@ -19,10 +19,18 @@ from cot_redhanded.cot_redhanded import (
     cot_redhanded_generate,
     cot_redhanded_monitor,
 )
+from cot_redhanded.monitor_scoring import (
+    CHANNEL_KEYS,
+    message_text,
+    parse_verdict,
+    parse_verdicts,
+    robust_monitor_scorer,
+)
 
 __all__ = [
     "ATTACK_POLICIES",
     "CHANNELS",
+    "CHANNEL_KEYS",
     "DEFAULT_FALSE_POSITIVE_RATE",
     "HYBRID_ACTION_WEIGHT",
     "ID_SETS",
@@ -35,7 +43,11 @@ __all__ = [
     "cot_redhanded_monitor",
     "false_positive_rate",
     "hybrid_score",
+    "message_text",
+    "parse_verdict",
+    "parse_verdicts",
     "read_monitor_samples",
+    "robust_monitor_scorer",
     "roc_auc",
     "suspicion_threshold",
 ]

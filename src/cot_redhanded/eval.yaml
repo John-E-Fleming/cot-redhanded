@@ -8,7 +8,7 @@ description: |
 group: Safeguards
 contributors:
   - John-E-Fleming
-version: "1-A"
+version: "1-B"
 tasks:
   - name: cot_redhanded_generate
     dataset_samples: 855 # the TEST split at the default side task and attack policy

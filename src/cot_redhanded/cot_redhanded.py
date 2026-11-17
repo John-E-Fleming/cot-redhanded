@@ -32,6 +32,8 @@ from cot_red_handed.tasks.tasks import TaskManager
 from inspect_ai import Task, task
 from inspect_evals_utils.metadata import load_eval_version
 
+from cot_redhanded.monitor_scoring import robust_monitor_scorer
+
 # The version comes from eval.yaml, the file beside this module.
 EVAL_VERSION = load_eval_version(__file__)
 
@@ -147,6 +149,8 @@ def cot_redhanded_monitor(
     eval_log_path: str,
     prompt_id: int = DEFAULT_MONITOR_PROMPT_ID,
     has_side_task: bool = True,
+    prompt_path: str = "",
+    robust_parsing: bool = True,
 ) -> Task:
     """Score a trusted monitor on the transcripts a generation run produced.
 
@@ -162,12 +166,24 @@ def cot_redhanded_monitor(
             `monitor/prompts` directory.
         has_side_task: False when scoring a benign run, which upstream uses to establish the
             false positive baseline.
+        prompt_path: Directory to load the monitor prompt from. Upstream defaults to the
+            `monitor/prompts` directory inside its own package, which holds a single prompt;
+            pass a directory of your own to use a different one.
+        robust_parsing: Read the monitor's verdict with `robust_monitor_scorer`, which records
+            an unreadable verdict instead of raising on it. Pass False for upstream's parser,
+            which calls `float()` on whatever its regex captured and so ends the run when a
+            monitor writes `<answer>Score: 85</answer>`. True by default because the monitor is
+            `--model`, and a monitor that can only be one model is not a parameter.
 
     Returns:
-        Upstream's task, unmodified.
+        Upstream's task, with the verdict parser replaced unless `robust_parsing` is False.
     """
-    return _upstream_run_monitor(
+    upstream_task = _upstream_run_monitor(
         eval_log_path=eval_log_path,
         prompt_id=prompt_id,
         has_side_task=has_side_task,
+        prompt_path=prompt_path,
     )
+    if robust_parsing:
+        upstream_task.scorer = [robust_monitor_scorer()]
+    return upstream_task

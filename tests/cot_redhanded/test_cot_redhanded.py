@@ -22,7 +22,7 @@ TEST_SPLIT_SIZE = 855
 
 
 def test_version_comes_from_eval_yaml() -> None:
-    assert EVAL_VERSION == "1-A"
+    assert EVAL_VERSION == "1-B"
 
 
 def test_task_space_matches_the_paper() -> None:

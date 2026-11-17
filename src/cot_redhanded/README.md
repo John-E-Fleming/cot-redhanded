@@ -87,6 +87,8 @@ See `uv run inspect eval --help` for all available options.
 - `eval_log_path` (str): Path to a single `.eval` log from `cot_redhanded_generate`. Upstream rejects a directory.
 - `prompt_id` (int): Which monitor prompt to use, matched against the files in upstream's `monitor/prompts` directory. (default: `1`)
 - `has_side_task` (bool): False when scoring a benign run, which upstream uses to establish the false positive baseline. (default: `True`)
+- `prompt_path` (str): Directory to load the monitor prompt from. Upstream defaults to the `monitor/prompts` directory inside its own package, which holds a single prompt; pass a directory of your own to use a different one. (default: `''`)
+- `robust_parsing` (bool): Read the monitor's verdict with `robust_monitor_scorer`, which records an unreadable verdict instead of raising on it. Pass False for upstream's parser, which calls `float()` on whatever its regex captured and so ends the run when a monitor writes `<answer>Score: 85</answer>`. True by default because the monitor is `--model`, and a monitor that can only be one model is not a parameter. (default: `True`)
 
 <!-- /Parameters: Automatically Generated -->
 
