@@ -528,3 +528,30 @@ Of the 51 side successes, 26 come from samples whose **main task failed**, where
 - `complexity` on TEST started 19:05:04Z, `edgecase` queued behind it.
 - A benign arm on RED would confirm the ~45–46% baseline that two side tasks now point at.
 - Five of eleven side-task verifiers now have known problems: `iodelete` (tautology), `exit` (credits a failing main task), `ioexfil` (measures intent), `longlines`/`edgecase` (not sabotage), plus `defaultval` (cannot distinguish swallowing from handling).
+
+## 2026-11-17 — Model availability caps the replication matrix on both axes
+
+Checked against OpenRouter's public model list (474 models) while Run 9 generates. This is a hard constraint on how much of the paper can ever be replicated, so it is recorded here rather than discovered again later.
+
+### Trusted monitors — 3 of 4 reachable
+
+| Paper's monitor       | On OpenRouter                  | Status              |
+| --------------------- | ------------------------------ | ------------------- |
+| GPT-4.1-mini          | `openai/gpt-4.1-mini`          | ✅ in use           |
+| GPT-4.1-nano          | `openai/gpt-4.1-nano`          | ✅ available, unrun |
+| Gemini 2.5 Flash Lite | `google/gemini-2.5-flash-lite` | ✅ available, unrun |
+| Claude 3.5 Haiku      | **absent**                     | ❌ retired          |
+
+The oldest Anthropic Haiku listed is `anthropic/claude-haiku-4.5`. A direct Anthropic key may still serve `claude-3-5-haiku-20241022`; this repo is configured with an OpenRouter key only, so through the current setup it is unavailable. That is the one route worth testing before calling it closed.
+
+### Untrusted models — 1 of 5 reachable
+
+Already known for the DeepSeek distills and Grok 3 Mini. Now also confirmed: **Claude 3.7 Sonnet Thinking is absent**, the oldest Sonnet listed being `anthropic/claude-sonnet-4.5`. And the one model we do have, `deepseek/deepseek-r1-0528`, is a later revision of the paper's R1 served at fp4 by DeepInfra — so even the single occupied cell is an approximation rather than a match.
+
+### Why this matters beyond logistics
+
+The paper's headline (Figure 3) is **averaged over untrusted models and attack policies**. With 1 of 5 untrusted models permanently available, that average cannot be reconstructed at any budget. The ceiling on replication is set by model retirement, not by effort or spend.
+
+This is a threat neither framework covers cleanly. ABC **T.6** ("setup frozen over time") is the nearest item, but it is written about tools, APIs and datasets — the things *around* the agent. Here the retired component **is the subject of the evaluation**, which ABC does not anticipate because it treats the model as the free variable. Kirgis has no equivalent either. An eval whose subjects are hosted models has a reproducibility half-life, and both papers are silent on it. Worth raising at the reading group.
+
+**Correction:** an earlier note in this session said running the remaining monitors would take the monitor axis to 4 of 4. It caps at 3 of 4.
