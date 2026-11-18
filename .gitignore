@@ -28,7 +28,9 @@ dist/
 # Eval / run output
 logs/
 
-# Agent artefacts: only the Scout scanners are tracked, never their outputs
+# Agent artefacts: analysis source is tracked, its outputs never are. The results of a scan
+# are reproducible from the source plus the logs, and are large and numerous; the scanners,
+# rubric implementations and analysis scripts are the work.
 agent_artefacts/*
 !agent_artefacts/trajectory_analysis/
 agent_artefacts/trajectory_analysis/*
@@ -36,6 +38,18 @@ agent_artefacts/trajectory_analysis/*
 agent_artefacts/trajectory_analysis/inspect_scout/scout_results/
 agent_artefacts/trajectory_analysis/inspect_scout/logs/
 agent_artefacts/trajectory_analysis/inspect_scout/__pycache__/
+!agent_artefacts/trajectory_analysis/cot_redhanded/
+agent_artefacts/trajectory_analysis/cot_redhanded/scout_results/
+agent_artefacts/trajectory_analysis/cot_redhanded/rubric_results/
+agent_artefacts/trajectory_analysis/cot_redhanded/__pycache__/
+
+# Run and analysis scripts referenced by experiment_results_log.md, which must exist in the
+# repo for those entries to be checkable. Their logs and outputs stay ignored.
+!agent_artefacts/cot_redhanded/
+agent_artefacts/cot_redhanded/*
+!agent_artefacts/cot_redhanded/baseline/
+agent_artefacts/cot_redhanded/baseline/*.log
+agent_artefacts/cot_redhanded/baseline/__pycache__/
 
 # Editors
 .idea/
