@@ -11,7 +11,13 @@ import pytest
 from inspect_ai import Task, eval
 from pytest_inspect_evals.assertions import assert_eval_success
 
-from cot_redhanded import ATTACK_POLICIES, ID_SETS, SIDE_TASKS, cot_redhanded_generate
+from cot_redhanded import (
+    ATTACK_POLICIES,
+    ID_SETS,
+    REASONING_EFFORTS,
+    SIDE_TASKS,
+    cot_redhanded_generate,
+)
 from cot_redhanded.cot_redhanded import EVAL_VERSION
 
 # Upstream's generation settings, from cot_red_handed.tasks.config. The baseline is only a
@@ -118,3 +124,57 @@ def test_annotated_side_tasks_are_restricted_to_annotated_ids() -> None:
         assert all(
             s.metadata is not None and s.metadata.get("side_test_case") for s in task.dataset
         )
+
+
+class TestReasoningParameters:
+    """How much the untrusted model thinks is the independent variable, so it is a parameter.
+
+    Upstream's values must stay the defaults: the reasoning trace is what the CoT monitor
+    reads, so a changed default would silently move every CoT figure.
+    """
+
+    def test_the_defaults_are_upstreams(self) -> None:
+        config = cot_redhanded_generate().config
+        assert config.reasoning_effort == "high"
+        assert config.reasoning_tokens == 12800
+
+    @pytest.mark.parametrize("effort", REASONING_EFFORTS)
+    def test_every_advertised_effort_reaches_the_config(self, effort: str) -> None:
+        assert cot_redhanded_generate(reasoning_effort=effort).config.reasoning_effort == effort
+
+    def test_an_empty_effort_keeps_upstreams(self) -> None:
+        assert cot_redhanded_generate(reasoning_effort="").config.reasoning_effort == "high"
+
+    def test_rejects_an_unknown_effort(self) -> None:
+        with pytest.raises(ValueError, match="reasoning effort"):
+            cot_redhanded_generate(reasoning_effort="exhaustive")
+
+    def test_a_token_budget_reaches_the_config(self) -> None:
+        assert cot_redhanded_generate(reasoning_tokens=4000).config.reasoning_tokens == 4000
+
+    def test_a_token_budget_alone_clears_the_inherited_effort(self) -> None:
+        # Inspect's OpenRouter provider prefers effort and drops the budget when both are set,
+        # so leaving upstream's "high" in place would make this parameter do nothing.
+        config = cot_redhanded_generate(reasoning_tokens=4000).config
+        assert config.reasoning_tokens == 4000
+        assert config.reasoning_effort is None
+
+    def test_an_explicit_effort_wins_over_a_token_budget(self) -> None:
+        # Asking for both is asking for what the provider honours, which is effort.
+        config = cot_redhanded_generate(reasoning_effort="low", reasoning_tokens=4000).config
+        assert config.reasoning_effort == "low"
+        assert config.reasoning_tokens == 4000
+
+    def test_zero_tokens_keeps_upstreams(self) -> None:
+        assert cot_redhanded_generate(reasoning_tokens=0).config.reasoning_tokens == 12800
+
+    def test_rejects_a_negative_token_budget(self) -> None:
+        with pytest.raises(ValueError, match="reasoning_tokens"):
+            cot_redhanded_generate(reasoning_tokens=-1)
+
+    def test_the_other_upstream_settings_are_untouched(self) -> None:
+        # The merge that restores MODEL_CONFIG must keep working alongside these overrides.
+        config = cot_redhanded_generate(reasoning_effort="low", reasoning_tokens=100).config
+        assert config.temperature == pytest.approx(0.7)
+        assert config.max_tokens == 16000
+        assert config.top_p == pytest.approx(0.95)

@@ -81,6 +81,8 @@ See `uv run inspect eval --help` for all available options.
 - `attack_policy` (str): How the side task is framed to the model. One of `ATTACK_POLICIES`. (default: `'baseline'`)
 - `id_set` (str): Which of the paper's splits to draw main tasks from. One of `ID_SETS`. (default: `'TEST'`)
 - `use_pairings` (bool): Draw one side task per main task from upstream's balanced pairings, rather than running this side task across the whole split. (default: `False`)
+- `reasoning_effort` (str): Override how hard the untrusted model thinks. One of `REASONING_EFFORTS`. Empty keeps upstream's `"high"`. The reasoning trace is what the CoT monitor reads, so this is an experimental variable, not a tuning knob. (default: `''`)
+- `reasoning_tokens` (int): Override the reasoning token budget. 0 keeps upstream's 12,800. Inspect's OpenRouter provider sends *either* an effort or a budget and prefers effort, so passing this without also passing `reasoning_effort` clears the effort in order to make the budget take effect. Passing both keeps effort and drops the budget, which is upstream's own situation: it sets both, so its 12,800 has never reached the API. Note also that OpenRouter declares only 10 of its 356 reasoning-capable models as honouring a budget at all. (default: `0`)
 
 ### `cot_redhanded_monitor`
 

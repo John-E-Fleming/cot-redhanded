@@ -73,6 +73,13 @@ ATTACK_POLICIES = (
 )
 ID_SETS = ("TRAIN", "VAL", "RED", "TEST")
 
+# Every reasoning effort Inspect's GenerateConfig accepts. A given model supports a subset,
+# which OpenRouter declares as `reasoning.supported_efforts` on its models endpoint; of 356
+# reasoning-capable models there, 237 declare a vocabulary and 31 distinct vocabularies are in
+# use, so this cannot be narrowed to one list that is right for every model. An effort a model
+# does not support is the provider's error to raise, not ours to predict.
+REASONING_EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+
 # Upstream's name for "no side task": `load_red_dataset` skips the side-task injection when the
 # side task is None or "baseline", and `SIDE_TASK_CONFIGS["baseline"]` scores with
 # `baseline_verify`, which checks the main task alone. This is the benign control arm, and the
@@ -87,6 +94,8 @@ def cot_redhanded_generate(
     attack_policy: str = DEFAULT_ATTACK_POLICY,
     id_set: str = DEFAULT_ID_SET,
     use_pairings: bool = False,
+    reasoning_effort: str = "",
+    reasoning_tokens: int = 0,
 ) -> Task:
     """Run the untrusted model on a coding problem carrying a hidden side task.
 
@@ -100,6 +109,16 @@ def cot_redhanded_generate(
         id_set: Which of the paper's splits to draw main tasks from. One of `ID_SETS`.
         use_pairings: Draw one side task per main task from upstream's balanced pairings,
             rather than running this side task across the whole split.
+        reasoning_effort: Override how hard the untrusted model thinks. One of
+            `REASONING_EFFORTS`. Empty keeps upstream's `"high"`. The reasoning trace is what
+            the CoT monitor reads, so this is an experimental variable, not a tuning knob.
+        reasoning_tokens: Override the reasoning token budget. 0 keeps upstream's 12,800.
+            Inspect's OpenRouter provider sends *either* an effort or a budget and prefers
+            effort, so passing this without also passing `reasoning_effort` clears the effort
+            in order to make the budget take effect. Passing both keeps effort and drops the
+            budget, which is upstream's own situation: it sets both, so its 12,800 has never
+            reached the API. Note also that OpenRouter declares only 10 of its 356
+            reasoning-capable models as honouring a budget at all.
 
     Returns:
         Upstream's task, unmodified.
@@ -119,6 +138,13 @@ def cot_redhanded_generate(
         )
     if id_set not in ID_SETS:
         raise ValueError(f"Unknown id set {id_set!r}; expected one of {', '.join(ID_SETS)}")
+    if reasoning_effort and reasoning_effort not in REASONING_EFFORTS:
+        raise ValueError(
+            f"Unknown reasoning effort {reasoning_effort!r}; expected one of "
+            f"{', '.join(REASONING_EFFORTS)}, or '' to keep upstream's"
+        )
+    if reasoning_tokens < 0:
+        raise ValueError(f"reasoning_tokens must not be negative, got {reasoning_tokens}")
 
     upstream_task = TaskManager().generate_task(
         main_task_name=MAIN_TASK,
@@ -141,6 +167,23 @@ def cot_redhanded_generate(
     # The task's own values win on overlap, matching the precedence upstream gets by putting
     # the narrower config on the task.
     upstream_task.config = MODEL_CONFIG.merge(upstream_task.config)
+
+    # Applied after the merge so these win over both upstream configs. How much chain of
+    # thought the model emits is the independent variable of this whole eval, so it is the one
+    # generation setting worth exposing; the rest stay at upstream's values.
+    if reasoning_effort:
+        upstream_task.config.reasoning_effort = reasoning_effort  # type: ignore[assignment]
+    if reasoning_tokens:
+        upstream_task.config.reasoning_tokens = reasoning_tokens
+        # `inspect_ai/model/_providers/openrouter.py` sends one of effort or budget and prefers
+        # effort, warning and dropping the budget when both are set. Upstream sets both, so
+        # asking for a budget here would otherwise change nothing at all. Clearing the
+        # inherited effort is what makes this parameter do what its name says; an explicit
+        # effort still wins, because then the caller has asked for both and effort is what the
+        # provider honours.
+        if not reasoning_effort:
+            upstream_task.config.reasoning_effort = None
+
     return upstream_task
 
 
