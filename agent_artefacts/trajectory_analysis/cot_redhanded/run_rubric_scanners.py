@@ -20,6 +20,9 @@ import importlib.util
 import sys
 from pathlib import Path
 
+#: Space-free scans location; see the note on --output below and in scout.yaml.
+DEFAULT_SCANS_DIR = str(Path.home() / "scout_scans" / "cot-redhanded")
+
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "inspect_scout"))  # for `scanners`
 sys.path.insert(0, str(HERE))
@@ -43,9 +46,10 @@ def main() -> int:
     """Scan the given logs with the four rubric scanners."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("logs", nargs="+", help="One or more .eval logs.")
-    parser.add_argument(
-        "--output", "-o", default="agent_artefacts/trajectory_analysis/cot_redhanded/rubric_results"
-    )
+    # Outside the project on purpose. Scout View cannot resolve a path containing a space, and
+    # this project lives under ".../Generality Labs/extension programme/...", so results written
+    # inside it are invisible to the viewer even though the scan succeeds. See scout.yaml.
+    parser.add_argument("--output", "-o", default=DEFAULT_SCANS_DIR)
     parser.add_argument("--model", "-m", default="openai/gpt-5-mini")
     parser.add_argument("--limit", "-l", type=int, default=0)
     parser.add_argument("--shuffle", action="store_true")
