@@ -1,10 +1,62 @@
-title: "cot-redhanded"
+title: "CoT Red-Handed: Stress Testing Chain-of-Thought Monitoring"
 description: |
-  Stress testing chain-of-thought monitoring
-group: Knowledge # pick the group used by the inspect_evals listing for this benchmark
+  Stress tests chain-of-thought monitoring as an AI control measure. A weaker trusted monitor reads a
+  stronger untrusted model's reasoning trace and final code to detect sabotage hidden alongside a
+  legitimate coding task, and is compared against an action-only monitor that sees the code alone and
+  a hybrid protocol that scores reasoning and actions independently before combining them. Monitors
+  are compared by catch rate at a 1% false positive rate, calibrated against benign completions.
+group: Safeguards
 contributors:
   - John-E-Fleming
-version: "1-A"
+version: "1-B"
 tasks:
-  - name: cot_redhanded
-    dataset_samples: 2
+  - name: cot_redhanded_generate
+    dataset_samples: 855 # the TEST split at the default side task and attack policy
+    comment: >-
+      Produces the transcripts the monitor scores. Measures the untrusted model's ability to
+      complete a hidden side task alongside the main one, not a monitor's ability to catch it.
+  - name: cot_redhanded_monitor
+    comment: >-
+      The eval proper: a trusted monitor scores reasoning and actions for suspicion. Sample
+      count depends on the generation log it is given, since only completions that passed both
+      the main and the side task are monitored.
+metadata:
+  sandbox:
+    - solver
+    - scorer
+  requires:
+    internet: true
+external_assets:
+  - type: huggingface
+    source: bigcode/bigcodebench
+    fetch_method: hf_dataset
+    state: unpinned
+    comment: >-
+      Main-task coding problems. Upstream calls hf_dataset with split="v0.1.4" and no
+      revision=, so the data can move under the baseline over time. Recorded as unpinned
+      because that is what this wrapper actually does: an earlier version of this file claimed
+      revision b74c0d0bf70d2c0bc459be537895cca163007f1a, the revision inspect_evals pins for
+      its own bigcodebench implementation, but the wrapper never passes it. Pinning it is an
+      uplift-phase change, not a baseline one.
+  - type: direct_url
+    source: https://raw.githubusercontent.com/cotredhanded/code/505d9fca6fc5b859492d8b9500b374c8cbf501e8/src/cot_red_handed/tasks/data/cot_bigcodebench_side_tasks.jsonl
+    fetch_method: other
+    state: pinned
+    comment: >-
+      Edge-case side-task test cases (300 rows) from the reference implementation, MIT licensed.
+      Fetched and cached by load_json_dataset, which downloads over fsspec rather than any of the
+      named fetch methods.
+  - type: direct_url
+    source: https://raw.githubusercontent.com/cotredhanded/code/505d9fca6fc5b859492d8b9500b374c8cbf501e8/src/cot_red_handed/tasks/data/task_id_sets.json
+    fetch_method: other
+    state: pinned
+    comment: >-
+      TRAIN/VAL/RED/TEST splits over the 1,140 BigCodeBench task ids, from the reference
+      implementation, MIT licensed. Fetched and cached by load_json_dataset.
+  - type: direct_url
+    source: https://raw.githubusercontent.com/cotredhanded/code/505d9fca6fc5b859492d8b9500b374c8cbf501e8/src/cot_red_handed/tasks/data/bigcodebench_pairings.json
+    fetch_method: other
+    state: pinned
+    comment: >-
+      Main-task to side-task pairings from the reference implementation, MIT licensed. Fetched and
+      cached by load_json_dataset.

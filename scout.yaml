@@ -1,0 +1,42 @@
+# Inspect Scout project config.
+#
+# ============================================================================================
+# WHY THESE PATHS LIVE OUTSIDE THE PROJECT
+#
+# Scout View cannot resolve a path containing a space. This project sits at
+#   /Users/johnfleming/Desktop/Generality Labs/extension programme/CoT-redhanded-eval
+# which has two of them ("Generality Labs", "extension programme"), so ANY scans or transcripts
+# addressed through the project path are invisible to the viewer even though the scan succeeded
+# and the parquet files are on disk. The failure is silent: the viewer shows an empty list, not
+# an error.
+#
+# Tell-tale: `scout scan list <dir>` finds the scans and the HTTP API returns them, but the
+# viewer shows nothing. That is path resolution, not a scan failure.
+#
+# So: scans are written to a space-free directory outside the project, and transcripts are
+# reached through a space-free symlink to the project:
+#   ~/scout_scans/cot-redhanded      <- real directory, holds the scan results
+#   ~/cot-redhanded-eval -> <this project>   <- symlink, so logs/ resolves without spaces
+#
+# If the symlink or that directory is missing, recreate them:
+#   mkdir -p ~/scout_scans && ln -s "$PWD" ~/cot-redhanded-eval
+#
+# ============================================================================================
+# WARNING: Scout View's "Project Settings" page EDITS THIS FILE. Opening it and saving rewrites
+# the Locations below with whatever the form holds; on 2026-11-18 it silently replaced the scans
+# path with the default `./scans`. Comments survive; values do not. If the viewer stops finding
+# things, check these two values first.
+#
+# To read results in the viewer, click SCANS in the left icon rail (route `#/scans`).
+# ============================================================================================
+
+name: cot-redhanded
+
+# Generation transcripts, reached through the space-free symlink rather than `./logs`.
+transcripts: /Users/johnfleming/cot-redhanded-eval/logs
+
+# Scan results. NOT `./scans`, and deliberately outside the project; see above.
+scans: /Users/johnfleming/scout_scans/cot-redhanded
+
+# The judge the rubric scanners were calibrated against; see `research/scanner_rubrics.md`.
+model: openrouter/anthropic/claude-haiku-5.5
