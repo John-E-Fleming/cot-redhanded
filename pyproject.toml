@@ -13,6 +13,7 @@ requires-python = ">=3.12"
 dependencies = [
     "inspect_ai>=0.3.262",
     "inspect-evals-utils[huggingface]==0.3.0",
+    "cot-red-handed",
 ]
 
 [project.urls]
@@ -29,7 +30,6 @@ dev = [
     "basedpyright>=1.40",
     "inspect-evals-lint==0.13.0",
     "inspect-scout>=0.6.2", # used by agent_artefacts/trajectory_analysis/inspect_scout/
-    "inspect-swe>=0.2.72", # the agentic example's claude_code agent
     "openai>=3.4",
     "pre-commit>=4.0",
     "pytest>=8.4",
@@ -79,6 +79,11 @@ target-version = "py312"
 extend-exclude = ["agent_artefacts", "*.md"]
 
 [tool.ruff.lint]
+# IECQ007 asks for PLW1514 (unspecified-encoding). It is a preview rule, so selecting PLW
+# alone leaves it off and enabling it needs preview = true — which also activates
+# rule-codes-in-selectors and would rewrite every code in this file to a rule name. Deferred
+# deliberately: IECQ007 is a warning, not a required check, and the code reads no files
+# without an explicit encoding.
 select = [
     "E",     # pycodestyle errors
     "W",     # pycodestyle warnings
@@ -112,3 +117,6 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "**/{tests,examples}/**" = ["D", "PLR2004"] # tests and examples skip docstring linting
+
+[tool.uv.sources]
+cot-red-handed = { git = "https://github.com/cotredhanded/code", rev = "505d9fca6fc5b859492d8b9500b374c8cbf501e8" }
