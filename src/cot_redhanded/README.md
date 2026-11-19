@@ -116,7 +116,7 @@ reason and the expected effect on scores. Two of them are not small:
 
 Nothing else here fixes, works around or improves on upstream. In particular the side-task
 verifiers are untouched, including the five with known defects recorded in
-`experiment_results_log.md`.
+`research/experiment_results_log.md`.
 
 ## Dataset
 
@@ -178,7 +178,7 @@ noted so their absence is not read as an oversight:
   action loop, so there is no ReAct-versus-Claude-Code choice to expose. The Docker sandbox
   belongs to the *scorer*, not to an agent.
 - **The side-task verifiers are deliberately fixed.** Five of the eleven have defects that change
-  their reported success rate, measured and recorded in `experiment_results_log.md`. Replacing
+  their reported success rate, measured and recorded in `research/experiment_results_log.md`. Replacing
   them would make this no longer a reproduction, so they stay and the defects are documented.
 
 ## Deviations from the original implementation

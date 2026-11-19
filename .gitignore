@@ -43,7 +43,7 @@ agent_artefacts/trajectory_analysis/cot_redhanded/scout_results/
 agent_artefacts/trajectory_analysis/cot_redhanded/rubric_results/
 agent_artefacts/trajectory_analysis/cot_redhanded/__pycache__/
 
-# Run and analysis scripts referenced by experiment_results_log.md, which must exist in the
+# Run and analysis scripts referenced by research/experiment_results_log.md, which must exist in
 # repo for those entries to be checkable. Their logs and outputs stay ignored.
 !agent_artefacts/cot_redhanded/
 agent_artefacts/cot_redhanded/*
@@ -61,6 +61,9 @@ Thumbs.db
 
 # Upstream cot_red_handed writes this cross-run cache into the working directory
 completed_ids/
+# Caches moved aside before a re-run, so `retry_solver` cannot short-circuit samples to
+# CORRECT with no model call and no transcript (B-6 in research/audit_issues.md).
+completed_ids_quarantine/
 
 # Inspect Scout writes here when run without an explicit -o
 scout_results/
