@@ -26,6 +26,29 @@ This project uses `uv`. Do not use `pip`, bare `python` or bare `pytest`.
 
 Tests must be deterministic and must not reach the network unless marked: use `mockllm/model` for model output, `unittest.mock` for external services and `tmp_path` for files. Mark tests that download datasets with `@pytest.mark.dataset_download`, that need Docker with `@pytest.mark.docker`, and that take long with `@pytest.mark.slow`. Add `@pytest.mark.huggingface` to a test that calls the Hugging Face Hub, so a test that downloads a dataset from the Hub carries both markers. Tests marked `huggingface` run when `HF_TOKEN` is unset, which includes CI, and the test summary then says how many ran without authentication.
 
+## Scout View and the space in this repo's path
+
+This project lives under `.../Generality Labs/extension programme/...`. **Scout View cannot resolve a path containing a space**, so scans or transcripts addressed through the project path are invisible to it — the viewer shows an empty list, with no error, while the scan itself succeeded and the parquet files are on disk.
+
+The tell-tale is that everything *except* the viewer works: `scout scan list <dir>` finds the scans and the HTTP API returns them. That means path resolution, not a scan failure.
+
+So both locations live outside the project, and `scout.yaml` points at them absolutely:
+
+- `~/scout_scans/cot-redhanded` — scan results (a real directory)
+- `~/cot-redhanded-eval` — a symlink to this repo, so `logs/` resolves without spaces
+
+Recreate them if the symlink dangles or the directory is lost:
+
+```bash
+mkdir -p ~/scout_scans && ln -s "$PWD" ~/cot-redhanded-eval
+```
+
+Three further gotchas:
+
+- `scout view` opens on Project Settings or Transcripts. **Click SCANS in the left icon rail.**
+- Scout View's **Project Settings page edits `scout.yaml`**. Opening and saving it rewrites the Locations with whatever the form holds; it has already replaced the scans path with `./scans` once. Comments survive, values do not.
+- The Inspect AI VS Code extension hides its entire Scout activity bar behind `inspect_ai.inspect_scout.installed`, resolved against the **selected Python interpreter**. `inspect_scout` is only in `.venv`, so if VS Code picks another interpreter the Scout UI and every `Scout View:` command silently vanish. `.vscode/settings.json` pins the interpreter via `python.defaultInterpreterPath`; select it once and reload the window, since VS Code caches the current selection. That file is plain JSON, not JSONC, because the repo's `check-json` pre-commit hook rejects comments.
+
 ## Guides
 
 - [BEST_PRACTICES.md](https://github.com/UKGovernmentBEIS/inspect_evals/blob/main/BEST_PRACTICES.md)
