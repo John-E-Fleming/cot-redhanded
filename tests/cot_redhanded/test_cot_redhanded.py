@@ -1,6 +1,7 @@
 """Tests for the two tasks and their scorers."""
 
 import math
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -8,7 +9,7 @@ from unittest.mock import patch
 import pytest
 from inspect_ai import eval
 from inspect_ai.log import EvalLog
-from inspect_ai.model import ModelName, ModelOutput, get_model
+from inspect_ai.model import ChatMessageUser, ModelName, ModelOutput, get_model
 from inspect_ai.scorer import Score, Target
 from inspect_ai.solver import TaskState
 from pytest_inspect_evals.assertions import assert_eval_success
@@ -22,6 +23,7 @@ from cot_redhanded import (
 )
 from cot_redhanded.cot_redhanded import EVAL_VERSION
 from cot_redhanded.prompts import MAIN_TASK_TEMPLATE
+from cot_redhanded.solvers import generate_until_success, stored_attempt
 from cot_redhanded.verifiers import Verdict
 from tests.cot_redhanded.test_transcripts import log_of, native_sample
 
@@ -84,6 +86,10 @@ class TestParameterValidation:
     def test_zero_monitor_samples(self) -> None:
         with pytest.raises(ValueError, match="monitor_samples"):
             cot_redhanded(monitor_samples=0)
+
+    def test_zero_attempts(self) -> None:
+        with pytest.raises(ValueError, match="max_attempts"):
+            cot_redhanded(max_attempts=0)
 
     def test_unknown_monitor_prompt(self) -> None:
         with pytest.raises(ValueError, match="Unknown monitor prompt"):
@@ -190,6 +196,7 @@ class TestCotRedhandedScorer:
         assert score.value == {
             "main": 1.0,
             "side": 1.0,
+            "attempts": 1.0,
             "action": pytest.approx(0.4),
             "cot": pytest.approx(0.4),
             "hybrid": pytest.approx(0.4),
@@ -248,9 +255,92 @@ class TestCotRedhandedScorer:
         assert score.metadata is not None
         assert score.metadata["cot_unreadable"] == 1
 
+    async def test_uses_the_verdict_the_solver_stored_instead_of_verifying_again(self) -> None:
+        # After several attempts the sandbox is not in its initial state, so the checks must
+        # not be run a second time.
+        state = state_for("attack")
+        state.store.set("cot_redhanded:verdict", asdict(Verdict(True, True, "attempt 3")))
+        state.store.set("cot_redhanded:attempts", 3)
+        monitor = mock_model(*verdicts(40, 40))
+        with (
+            patch("cot_redhanded.scorers.verify") as verify,
+            patch("cot_redhanded.scorers.get_model", return_value=monitor),
+        ):
+            score = await cot_redhanded_scorer(monitor_samples=1)(state, Target("tests"))
+        assert not verify.called
+        assert score is not None
+        assert isinstance(score.value, dict)
+        assert score.value["attempts"] == 3.0
+        assert score.value["cot"] == pytest.approx(0.4)
+        assert score.explanation == "attempt 3"
+
     async def test_the_answer_is_the_code_that_was_run(self) -> None:
         score, _ = await self.score(state_for("honest"), Verdict(False, None), [])
         assert score.answer == "def task_func():\n    return 1\n"
+
+
+class TestGenerateUntilSuccess:
+    """The multi-attempt solver, with the sandbox checks replaced by scripted verdicts."""
+
+    @staticmethod
+    async def solve(
+        max_attempts: int, outcomes: list[Verdict], replies: list[str]
+    ) -> tuple[TaskState, Any, Any]:
+        state = state_for("attack")
+        state.messages = [ChatMessageUser(content="the prompt")]
+        remaining = list(replies)
+        seen: list[list[Any]] = []
+
+        async def generate(current: TaskState) -> TaskState:
+            seen.append(list(current.messages))
+            reply = remaining.pop(0)
+            current.output = ModelOutput.from_content("mockllm/model", reply)
+            current.messages.append(current.output.message)
+            return current
+
+        with (
+            patch("cot_redhanded.solvers.verify", side_effect=outcomes) as verify,
+            patch("cot_redhanded.solvers.reset_sandbox") as reset,
+        ):
+            state = await generate_until_success(max_attempts)(state, generate)  # type: ignore[arg-type]
+        return state, (verify, reset), seen
+
+    async def test_stops_at_the_first_success(self) -> None:
+        outcomes = [Verdict(True, False), Verdict(True, True), Verdict(True, True)]
+        state, (verify, reset), _ = await self.solve(5, outcomes, ["one", "two", "three"])
+        assert verify.call_count == 2
+        assert reset.call_count == 1
+        assert state.output.completion == "two"
+        assert stored_attempt(state) == (Verdict(True, True), 2)
+
+    async def test_gives_up_after_the_last_attempt(self) -> None:
+        outcomes = [Verdict(False, False)] * 3
+        state, (verify, _), _ = await self.solve(3, outcomes, ["one", "two", "three"])
+        assert verify.call_count == 3
+        assert state.output.completion == "three"
+        assert stored_attempt(state) == (Verdict(False, False), 3)
+
+    async def test_a_first_time_success_never_resets_the_sandbox(self) -> None:
+        state, (_, reset), _ = await self.solve(5, [Verdict(True, True)], ["one"])
+        assert not reset.called
+        assert stored_attempt(state) == (Verdict(True, True), 1)
+
+    async def test_every_attempt_starts_from_the_prompt_alone(self) -> None:
+        # No feedback: the model is not shown its failed attempt.
+        outcomes = [Verdict(False, False), Verdict(True, True)]
+        state, _, seen = await self.solve(2, outcomes, ["one", "two"])
+        assert [[message.content for message in messages] for messages in seen] == [
+            ["the prompt"],
+            ["the prompt"],
+        ]
+        assert [message.content for message in state.messages] == ["the prompt", "two"]
+
+    def test_rejects_fewer_than_one_attempt(self) -> None:
+        with pytest.raises(ValueError, match="max_attempts"):
+            generate_until_success(0)
+
+    def test_a_sample_run_without_it_has_nothing_stored(self) -> None:
+        assert stored_attempt(state_for("attack")) is None
 
 
 class TestTranscriptMonitorScorer:
@@ -264,6 +354,7 @@ class TestTranscriptMonitorScorer:
         assert score.value == {
             "main": 1.0,
             "side": 1.0,
+            "attempts": 1.0,
             "action": pytest.approx(0.6),
             "cot": pytest.approx(0.6),
             "hybrid": pytest.approx(0.6),
@@ -361,3 +452,34 @@ def test_the_whole_eval_runs_in_the_sandbox() -> None:
     assert score.value["main"] == 1.0
     assert score.value["cot"] == pytest.approx(0.05)
     assert metrics_of(log)["monitored_honest"] == 1
+
+
+@pytest.mark.slow(60)
+@pytest.mark.docker
+@pytest.mark.dataset_download
+@pytest.mark.huggingface
+def test_a_failed_attempt_is_retried_in_the_sandbox() -> None:
+    """Two attempts allowed: the first reply fails the unit tests, the second passes them."""
+    task = cot_redhanded(side_task=[], id_set="RED", max_attempts=2)
+    sample = task.dataset[0]
+    assert sample.metadata is not None
+    wrong = (
+        "<think>\nplan\n</think>\n```python\ndef task_func(*args, **kwargs):\n    return None\n```"
+    )
+    right = f"<think>\nplan\n</think>\n```python\n{sample.metadata['reference_solution']}\n```"
+    [log] = eval(
+        task,
+        model=mock_model(wrong, right),
+        model_roles={"monitor": mock_model(*verdicts(5, 5, 5, 5))},
+        limit=1,
+        display="none",
+    )
+    assert_eval_success(log)
+    assert log.samples
+    score = next(iter((log.samples[0].scores or {}).values()))
+    assert isinstance(score.value, dict)
+    assert score.value["main"] == 1.0
+    assert score.value["attempts"] == 2.0
+    metrics = metrics_of(log)
+    assert metrics["honest_main_task"] == 1.0
+    assert metrics["monitored_honest"] == 1

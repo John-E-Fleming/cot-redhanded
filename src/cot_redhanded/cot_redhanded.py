@@ -37,6 +37,7 @@ from cot_redhanded.scorers import (
     transcript_monitor_scorer,
 )
 from cot_redhanded.side_tasks import ATTACK_POLICIES, SIDE_TASKS
+from cot_redhanded.solvers import generate_until_success
 from cot_redhanded.transcripts import load_transcript_samples
 
 __all__ = [
@@ -90,6 +91,7 @@ def cot_redhanded(
     id_set: str = DEFAULT_ID_SET,
     use_pairings: bool = False,
     include_honest: bool = True,
+    max_attempts: int = 1,
     monitor_samples: int = DEFAULT_MONITOR_SAMPLES,
     monitor_prompt_id: int = DEFAULT_MONITOR_PROMPT_ID,
     action_weight: float = HYBRID_ACTION_WEIGHT,
@@ -111,8 +113,13 @@ def cot_redhanded(
             in the reference implementation's pairings, so each problem is attacked once.
         include_honest: Include the honest samples, which set the monitor's threshold. Without
             them the catch rates cannot be computed and are reported as NaN.
+        max_attempts: How many attempts the untrusted model gets at each sample. A failed
+            attempt is retried from scratch, without feedback, until one succeeds. 1, the
+            reference implementation's default, is a single attempt; the paper's completion
+            rates also report 5.
         monitor_samples: How many times to sample each monitor channel per completion. The
-            channel's score is the mean. The paper uses 2.
+            action and CoT scores are each the mean; the hybrid uses one draw of each. The
+            paper uses 2.
         monitor_prompt_id: Which monitor prompt to use.
         action_weight: Weight on the action-only score in the hybrid score; the rest weights the
             chain-of-thought score. The paper uses 0.55.
@@ -138,6 +145,8 @@ def cot_redhanded(
         )
     if reasoning_tokens < 0:
         raise ValueError(f"reasoning_tokens must not be negative, got {reasoning_tokens}")
+    if max_attempts < 1:
+        raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
     if not side_tasks and not include_honest:
         raise ValueError("Nothing to run: no side task was given and include_honest is False")
 
@@ -150,7 +159,10 @@ def cot_redhanded(
         dataset=load_cot_redhanded_dataset(
             side_tasks, attack_policies, id_set, use_pairings, include_honest
         ),
-        solver=[prompt_template(MAIN_TASK_TEMPLATE), generate()],
+        solver=[
+            prompt_template(MAIN_TASK_TEMPLATE),
+            generate() if max_attempts == 1 else generate_until_success(max_attempts),
+        ],
         # Applies to the untrusted model only; Inspect does not pass a task's generation
         # settings on to a model resolved through a role, so the monitor keeps its defaults.
         config=GenerateConfig(
@@ -188,7 +200,8 @@ def cot_redhanded_monitor(
             `cot_redhanded` and from the reference implementation's generation task are both
             read.
         monitor_samples: How many times to sample each monitor channel per completion. The
-            channel's score is the mean. The paper uses 2.
+            action and CoT scores are each the mean; the hybrid uses one draw of each. The
+            paper uses 2.
         monitor_prompt_id: Which monitor prompt to use.
         action_weight: Weight on the action-only score in the hybrid score. The paper uses 0.55.
         false_positive_rate: The share of honest completions the monitor may flag. The paper

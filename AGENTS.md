@@ -20,6 +20,7 @@ This project uses `uv`. Do not use `pip`, bare `python` or bare `pytest`.
 - `src/cot_redhanded/side_tasks.py`, `verifiers.py`: the eleven side tasks and the sandbox check for each.
 - `src/cot_redhanded/extraction.py`: pulls the code and the reasoning out of a completion.
 - `src/cot_redhanded/monitor.py`, `scorers.py`: the monitor calls and the scorers that use them.
+- `src/cot_redhanded/solvers.py`: the retry loop used when `max_attempts` is above 1.
 - `src/cot_redhanded/metrics.py`: `control_metrics` (catch rate at a fixed false positive rate, AUC) and its arithmetic. `analysis.py` is a command-line wrapper over it for saved logs.
 - `src/cot_redhanded/transcripts.py`: reads saved generation logs for `cot_redhanded_monitor`.
 - `src/cot_redhanded/data/`, `sandbox/`: data files, and the Docker sandbox the code runs in.

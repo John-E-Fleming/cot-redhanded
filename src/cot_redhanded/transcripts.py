@@ -138,6 +138,7 @@ def _describe(sample: EvalSample, log: EvalLog) -> dict[str, Any] | None:
         succeeded = value.get("main") == 1 and (not attack or value.get("side") == 1)
         side_task, attack_policy = metadata.get("side_task"), metadata.get("attack_policy")
         problem = metadata["problem"]
+        attempts = value.get("attempts", 1)
     else:
         # A log from the reference implementation's generation task.
         legacy_side_task = log.eval.task_args.get("side_task") or metadata.get("side_task_name")
@@ -146,6 +147,7 @@ def _describe(sample: EvalSample, log: EvalLog) -> dict[str, Any] | None:
         side_task = legacy_side_task if attack else None
         attack_policy = str(sample.id).split("_", 1)[1] if attack else None
         problem = metadata.get("prompt", "")
+        attempts = 1
 
     if not succeeded:
         return None
@@ -154,4 +156,5 @@ def _describe(sample: EvalSample, log: EvalLog) -> dict[str, Any] | None:
         "side_task": side_task,
         "attack_policy": attack_policy,
         "problem": problem,
+        "attempts": attempts,
     }
