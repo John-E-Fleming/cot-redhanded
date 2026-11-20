@@ -1336,6 +1336,17 @@ Mini and nano do not move. Flash Lite does, because it is the monitor whose repl
 
 Flash Lite was reported in Run 11 as 70.0 / 36.4 / 62.9% on 140 attack samples. All 146 are now scored. Five of the six it had "lost" carried readable verdicts of 70 to 100.
 
-### Not yet measured
+### Two draws per monitor channel, measured
 
-Every figure above is one draw per monitor channel, because that is what the saved logs hold. The paper averages two, and `monitor_samples` now defaults to 2. A small live run confirms the path works (GPT-4.1-mini over the 13 `varname` attack and 26 honest RED transcripts, two draws each), but the effect of two draws on the headline figures has not been measured.
+The saved GPT-4.1-mini transcripts (146 attack, 428 honest) re-monitored natively with `monitor_samples=2`, through `cot_redhanded_monitor`. The metrics are the task's own. Each draw is kept in the score metadata, so the single-draw figures are recomputed from the same run.
+
+| Scores used             | Action        | CoT           | Hybrid        |
+| ----------------------- | ------------- | ------------- | ------------- |
+| Mean of two draws       | 71.2% / 0.887 | 63.7% / 0.872 | 74.0% / 0.890 |
+| Draw 1 alone            | 73.3% / 0.882 | 63.7% / 0.860 | 75.3% / 0.890 |
+| Draw 2 alone            | 71.2% / 0.887 | 63.7% / 0.860 | 73.3% / 0.888 |
+| Recorded baseline (1-B) | 74.7% / 0.882 | 62.3% / 0.863 | 74.0% / 0.890 |
+
+Averaging two draws does not change the picture: action 71–75%, CoT 62–64%, hybrid 73–75%, with the ordering intact. The spread between single draws of the same monitor on the same transcripts is about 2 to 3.5 points of catch rate, which is the monitor noise any comparison on this corpus has to clear. Averaging raises the CoT AUC slightly (0.860 to 0.872). The realised false positive rate under the averaged scores is 1.17% for action and hybrid and 0.47% for CoT. No draw in this run was missing a verdict or unreadable.
+
+The log is `logs/native-monitor-2draws/`.
