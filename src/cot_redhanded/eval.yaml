@@ -8,44 +8,29 @@ description: |
 group: Safeguards
 contributors:
   - John-E-Fleming
-version: "1-B"
+version: "2-A"
 tasks:
-  - name: cot_redhanded_generate
-    dataset_samples: 855 # the TEST split at the default side task and attack policy
+  - name: cot_redhanded
+    dataset_samples: 1710 # the TEST split at the defaults: 855 honest and 855 attack samples
     comment: >-
-      Produces the transcripts the monitor scores. Measures the untrusted model's ability to
-      complete a hidden side task alongside the main one, not a monitor's ability to catch it.
+      The eval: an untrusted model completes honest and attack samples, each completion is
+      verified in the sandbox, a trusted monitor scores the successful ones, and the catch rate
+      at a 1% false positive rate is reported as a metric.
   - name: cot_redhanded_monitor
     comment: >-
-      The eval proper: a trusted monitor scores reasoning and actions for suspicion. Sample
-      count depends on the generation log it is given, since only completions that passed both
-      the main and the side task are monitored.
+      Scoring only: runs the monitor over completions saved by earlier runs, so a second
+      monitor can be tried without generating again. The sample count depends on the logs it
+      is given, since only successful completions are monitored.
 metadata:
   sandbox:
-    - solver
     - scorer
   requires:
     internet: true
 external_assets:
   - type: huggingface
     source: bigcode/bigcodebench
-    fetch_method: hf_dataset
-    state: floating
-    comment: >-
-      Main-task coding problems. Upstream calls hf_dataset with split="v0.1.4" and no
-      revision=, so the data can move under the baseline over time. Recorded as floating
-      because that is what this wrapper actually does: an earlier version of this file claimed
-      revision b74c0d0bf70d2c0bc459be537895cca163007f1a, the revision inspect_evals pins for
-      its own bigcodebench implementation, but the wrapper never passes it. Pinning it is an
-      uplift-phase change, not a baseline one.
-  - type: git_dependency
-    source: https://github.com/cotredhanded/code
-    fetch_method: pyproject_toml
+    fetch_method: load_dataset
     state: pinned
     comment: >-
-      The reference implementation, MIT licensed, installed as the cot-red-handed package at
-      commit 505d9fca6fc5b859492d8b9500b374c8cbf501e8 through [tool.uv.sources] in pyproject.toml.
-      This wrapper calls its task and monitor code, and three data files ship inside the package
-      under cot_red_handed/tasks/data: cot_bigcodebench_side_tasks.jsonl (edge-case side-task test
-      cases), task_id_sets.json (the TRAIN/VAL/RED/TEST splits) and bigcodebench_pairings.json
-      (main-task to side-task pairings). Nothing here downloads those files separately.
+      Main-task coding problems, release v0.1.4, pinned to revision
+      b74c0d0bf70d2c0bc459be537895cca163007f1a.

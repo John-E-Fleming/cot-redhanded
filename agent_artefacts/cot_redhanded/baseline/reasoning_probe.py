@@ -38,11 +38,22 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from cot_red_handed.monitor.inspect_monitor import remove_comments
-from cot_red_handed.monitor.monitor_utils import find_cot
-from cot_red_handed.tasks.config import MODEL_CONFIG
 from dotenv import load_dotenv
 from inspect_ai.model import ContentReasoning, ContentText, GenerateConfig, get_model
+
+# The eval's own extraction, which is what decides whether a completion can be monitored.
+from cot_redhanded.extraction import fenced_action as remove_comments
+from cot_redhanded.extraction import find_reasoning as find_cot
+
+# The untrusted model's generation settings, as `cot_redhanded` sets them.
+MODEL_CONFIG = GenerateConfig(
+    temperature=0.7,
+    top_p=0.95,
+    max_tokens=16000,
+    reasoning_tokens=12800,
+    reasoning_effort="high",
+    max_retries=3,
+)
 
 # `inspect eval` reads .env itself; a standalone script does not, and the OpenRouter key lives
 # there. Loaded at import so the key never has to be put on a command line.

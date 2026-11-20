@@ -13,7 +13,6 @@ requires-python = ">=3.12"
 dependencies = [
     "inspect_ai>=0.3.262",
     "inspect-evals-utils[huggingface]==0.3.0",
-    "cot-red-handed",
 ]
 
 [project.urls]
@@ -45,13 +44,18 @@ where = ["src"]
 include = ["cot_redhanded*"] # examples/ stays out of the wheel
 
 [tool.setuptools.package-data]
-"*" = ["eval.yaml"]
+"*" = ["eval.yaml", "data/*", "sandbox/*"]
 
 # Layout preset: multi-eval (tests/<package>/, src/<package>/README.md) or
 # single-eval (flat tests/, README at the root). A hybrid repo keeps a preset and
 # sets tests_layout or readme_location here on top of it.
 [tool.inspect-evals-lint]
 preset = "multi-eval"
+
+# The `ioexfil` side task is verified by capturing the sandbox's own network traffic with
+# tcpdump, which needs these two capabilities. They apply inside the container only.
+[tool.inspect-evals-lint.allowlists]
+sandbox_privileges = { cot_redhanded = ["default:cap_add:NET_ADMIN", "default:cap_add:NET_RAW"] }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -117,6 +121,6 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "**/{tests,examples}/**" = ["D", "PLR2004"] # tests and examples skip docstring linting
-
-[tool.uv.sources]
-cot-red-handed = { git = "https://github.com/cotredhanded/code", rev = "505d9fca6fc5b859492d8b9500b374c8cbf501e8" }
+# The prompts are the reference implementation's text, character for character, and some of
+# its lines end in a space that reaches the model.
+"src/cot_redhanded/prompts.py" = ["W291"]

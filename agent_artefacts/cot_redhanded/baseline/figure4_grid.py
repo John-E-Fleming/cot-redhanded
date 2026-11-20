@@ -26,11 +26,11 @@ import argparse
 import json
 from pathlib import Path
 
-from cot_redhanded.analysis import (
+from cot_redhanded.analysis import read_monitor_samples
+from cot_redhanded.metrics import (
     CHANNELS,
     catch_rate,
     false_positive_rate,
-    read_monitor_samples,
     roc_auc,
     suspicion_threshold,
 )
