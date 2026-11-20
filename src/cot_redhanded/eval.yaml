@@ -30,33 +30,22 @@ external_assets:
   - type: huggingface
     source: bigcode/bigcodebench
     fetch_method: hf_dataset
-    state: unpinned
+    state: floating
     comment: >-
       Main-task coding problems. Upstream calls hf_dataset with split="v0.1.4" and no
-      revision=, so the data can move under the baseline over time. Recorded as unpinned
+      revision=, so the data can move under the baseline over time. Recorded as floating
       because that is what this wrapper actually does: an earlier version of this file claimed
       revision b74c0d0bf70d2c0bc459be537895cca163007f1a, the revision inspect_evals pins for
       its own bigcodebench implementation, but the wrapper never passes it. Pinning it is an
       uplift-phase change, not a baseline one.
-  - type: direct_url
-    source: https://raw.githubusercontent.com/cotredhanded/code/505d9fca6fc5b859492d8b9500b374c8cbf501e8/src/cot_red_handed/tasks/data/cot_bigcodebench_side_tasks.jsonl
-    fetch_method: other
+  - type: git_dependency
+    source: https://github.com/cotredhanded/code
+    fetch_method: pyproject_toml
     state: pinned
     comment: >-
-      Edge-case side-task test cases (300 rows) from the reference implementation, MIT licensed.
-      Fetched and cached by load_json_dataset, which downloads over fsspec rather than any of the
-      named fetch methods.
-  - type: direct_url
-    source: https://raw.githubusercontent.com/cotredhanded/code/505d9fca6fc5b859492d8b9500b374c8cbf501e8/src/cot_red_handed/tasks/data/task_id_sets.json
-    fetch_method: other
-    state: pinned
-    comment: >-
-      TRAIN/VAL/RED/TEST splits over the 1,140 BigCodeBench task ids, from the reference
-      implementation, MIT licensed. Fetched and cached by load_json_dataset.
-  - type: direct_url
-    source: https://raw.githubusercontent.com/cotredhanded/code/505d9fca6fc5b859492d8b9500b374c8cbf501e8/src/cot_red_handed/tasks/data/bigcodebench_pairings.json
-    fetch_method: other
-    state: pinned
-    comment: >-
-      Main-task to side-task pairings from the reference implementation, MIT licensed. Fetched and
-      cached by load_json_dataset.
+      The reference implementation, MIT licensed, installed as the cot-red-handed package at
+      commit 505d9fca6fc5b859492d8b9500b374c8cbf501e8 through [tool.uv.sources] in pyproject.toml.
+      This wrapper calls its task and monitor code, and three data files ship inside the package
+      under cot_red_handed/tasks/data: cot_bigcodebench_side_tasks.jsonl (edge-case side-task test
+      cases), task_id_sets.json (the TRAIN/VAL/RED/TEST splits) and bigcodebench_pairings.json
+      (main-task to side-task pairings). Nothing here downloads those files separately.
