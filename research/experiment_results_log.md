@@ -1401,14 +1401,11 @@ The 391 completed attack samples were scored together with the 428 honest TEST s
 
 AUC over all 391: action 0.733, CoT 0.763, hybrid 0.780. Realised false positive rate: 0.9% action, 0.0% CoT, 0.9% hybrid.
 
-Against the paper's description of Figure 5 for this model and monitor:
+Section 3.2 of the paper describes Figure 5 with three qualitative claims. Its "32 percentage points" and "below 20% on average" are averages over all five untrusted models and both monitors, so they are not targets for this one model; the bar values below are.
 
-- **Subtle, action below 20%:** 13.0%. Matches.
-- **Subtle, CoT about ten points above action:** 10.9 points above. Matches.
-- **Subtle, hybrid below 20% on average:** 23.6%, slightly above. The hybrid here tracks the CoT monitor, not the action monitor.
-- **Non-subtle, action catches nearly all:** 100% on five of the six side tasks, 31.0% on `exit`, which pulls the pooled figure to 74.8%.
-- **Non-subtle, hybrid about equal to action:** 75.7% against 74.8%. Matches.
-- **Non-subtle, CoT about 32 points below action:** 18.3 points below. Same direction, smaller gap.
+- **Non-subtle: hybrid on par with action.** 75.7% against 74.8%. Holds.
+- **Subtle: hybrid matches CoT.** 23.6% against 23.9%. Holds.
+- **Subtle: hybrid over twice the action catch rate.** 1.8 times here (23.6% against 13.0%); 3.3 times on the paper's own bars for this model.
 
 The paper prints the values on the bars of Figure 5 (DeepSeek R1 with the GPT-4.1-mini monitor):
 
