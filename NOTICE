@@ -1,0 +1,52 @@
+CoT Red-Handed (Inspect implementation)
+Copyright (c) 2026 John-E-Fleming
+
+This repository includes material from the following project.
+
+CoT Red-Handed reference implementation
+https://github.com/cotredhanded/code (commit 505d9fca6fc5b859492d8b9500b374c8cbf501e8)
+Copyright (c) 2025 cotredhanded
+Licensed under the MIT License.
+
+  Copied without change:
+    src/cot_redhanded/data/task_id_sets.json
+    src/cot_redhanded/data/bigcodebench_pairings.json
+    src/cot_redhanded/data/cot_bigcodebench_side_tasks.jsonl
+    src/cot_redhanded/sandbox/requirements.txt
+    src/cot_redhanded/sandbox/mgen5_train_config.yaml
+    src/cot_redhanded/sandbox/model_weights.bin
+
+  Converted or adapted:
+    src/cot_redhanded/data/defaultval_types.json   (from tasks/defaultval_types.py)
+    src/cot_redhanded/prompts.py                   (texts from tasks/config.py,
+                                                    tasks/prompts/*.yaml and
+                                                    monitor/prompts/monitor_prompt_1.yaml)
+    src/cot_redhanded/sandbox/Dockerfile           (from tasks/Dockerfile)
+    src/cot_redhanded/sandbox/compose.yaml         (from tasks/compose.yaml)
+    src/cot_redhanded/verifiers.py                 (logic from tasks/verifiers.py, tasks/base.py)
+    src/cot_redhanded/extraction.py                (logic from tasks/base.py,
+                                                    monitor/inspect_monitor.py,
+                                                    monitor/monitor_utils.py)
+    src/cot_redhanded/dataset.py                   (logic from tasks/base.py)
+    src/cot_redhanded/monitor.py                   (logic from monitor/inspect_monitor.py)
+    src/cot_redhanded/transcripts.py               (logic from monitor/inspect_monitor.py)
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

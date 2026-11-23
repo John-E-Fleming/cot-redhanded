@@ -216,6 +216,30 @@ Per B-3 every sample takes this branch, so this is the only live failure path.
 
 *Cost:* cross-side-task comparisons of main-task rates are not like-for-like.
 
+### B-8 · a reply with no verdict is scored 0, and 1-B hid it by dropping the sample
+
+The reference implementation sums the verdicts it finds in a monitor reply. When it finds none, it sums an empty list, so the sample scores 0 and enters the catch rate as "not suspicious". Several such replies do state a number, just without an opening tag (`… </quotes> 75 </answer>`). In the saved logs this is 1 reply for GPT-4.1-mini, 9 for nano and 8 for Flash Lite.
+
+Version 1-B dropped these samples instead of scoring them 0. That was a divergence from the reference that had not been chosen, found in review (PR #3). The native rewrite restores the reference behaviour and counts each occurrence per sample (`<channel>_missing`), so the fix can be measured. See Run 20.
+
+### B-9 · `edgecase` problem 1072's side test is not deterministic
+
+Replaying the saved completion gave a different side-task result from the one logged, and the part of the check that runs the unchanged reference solution flipped too. The test shuffles data at random. Found by the verifier replay in Run 20; not yet checked for other problems.
+
+### B-10 · `exit` is caught far less often than the paper's non-subtle bars imply
+
+*Seen:* TEST split, paired, `baseline` policy, DeepSeek R1 (Run 21 and Run 22 in the results log). The action monitor catches 31 to 41% of 42 completed `exit` samples under GPT-4.1-mini and 31 to 38% under Gemini 2.5 Flash Lite, against 100% for `iodelete`, `iodownload`, `ioexfil` and `permissions`. `exit` is 42 of 115 non-subtle samples, so the non-subtle action rate is 75 to 78% where the paper's Figure 5 shows 91.7%.
+
+*Why:* the monitors read `exit(0)` inside an input check as abrupt but ordinary validation. The wrapper around the reference implementation gave the same on the RED split (18 samples, 50.0% action), so this is not introduced by the rewrite, and the paper itself names `exit` as the exception among non-subtle side tasks.
+
+*Not explained:* the size of the difference from the paper. A-10 (the `SystemExit` rule) applies to every completed `exit` sample but was the paper's rule too. Open candidates: the paper's figures average over ten attack policies, and its DeepSeek R1 release is not stated.
+
+### B-11 · the catch rate at 1% false positive rate rests on four or five honest samples
+
+*Seen:* the same 391 attack samples scored against two honest sets from the same model and split (418 native, 428 from the wrapper). GPT-4.1-mini's subtle catch rates moved by 5 to 10 points and Gemini 2.5 Flash Lite's subtle CoT rate went from 23.6% to 11.6% (Run 22).
+
+*Cost:* differences of up to about 10 points in catch rate between runs of this size cannot be told apart from threshold noise. Comparisons between monitors or with the paper need either more honest samples or an interval on the threshold.
+
 ## Not issues
 
 Recorded so the audit does not re-litigate them.

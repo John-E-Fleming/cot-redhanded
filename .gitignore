@@ -50,6 +50,8 @@ agent_artefacts/cot_redhanded/*
 !agent_artefacts/cot_redhanded/baseline/
 agent_artefacts/cot_redhanded/baseline/*.log
 agent_artefacts/cot_redhanded/baseline/__pycache__/
+!agent_artefacts/cot_redhanded/parity/
+agent_artefacts/cot_redhanded/parity/__pycache__/
 
 # Editors
 .idea/

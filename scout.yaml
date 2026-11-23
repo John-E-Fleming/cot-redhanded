@@ -4,7 +4,7 @@
 # WHY THESE PATHS LIVE OUTSIDE THE PROJECT
 #
 # Scout View cannot resolve a path containing a space. This project sits at
-#   /Users/johnfleming/Desktop/Generality Labs/extension programme/CoT-redhanded-eval
+#   ~/Desktop/Generality Labs/extension programme/CoT-redhanded-eval
 # which has two of them ("Generality Labs", "extension programme"), so ANY scans or transcripts
 # addressed through the project path are invisible to the viewer even though the scan succeeded
 # and the parquet files are on disk. The failure is silent: the viewer shows an empty list, not
@@ -33,10 +33,10 @@
 name: cot-redhanded
 
 # Generation transcripts, reached through the space-free symlink rather than `./logs`.
-transcripts: /Users/johnfleming/cot-redhanded-eval/logs
+transcripts: ~/cot-redhanded-eval/logs
 
 # Scan results. NOT `./scans`, and deliberately outside the project; see above.
-scans: /Users/johnfleming/scout_scans/cot-redhanded
+scans: ~/scout_scans/cot-redhanded
 
 # The judge the rubric scanners were calibrated against; see `research/scanner_rubrics.md`.
 model: openrouter/anthropic/claude-haiku-5.5

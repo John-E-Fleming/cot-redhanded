@@ -14,11 +14,23 @@ This project uses `uv`. Do not use `pip`, bare `python` or bare `pytest`.
 
 ## Layout
 
-- `src/cot_redhanded/cot_redhanded.py`: the task, `record_to_sample`, and the version read from `eval.yaml`.
+- `src/cot_redhanded/cot_redhanded.py`: the two tasks, `cot_redhanded` and `cot_redhanded_monitor`, and the version read from `eval.yaml`.
+- `src/cot_redhanded/dataset.py`: loads BigCodeBench and builds honest and attack samples (`record_to_sample`).
+- `src/cot_redhanded/prompts.py`: every prompt, as constants. The texts are the reference implementation's; a test holds their digest.
+- `src/cot_redhanded/side_tasks.py`, `verifiers.py`: the eleven side tasks and the sandbox check for each.
+- `src/cot_redhanded/extraction.py`: pulls the code and the reasoning out of a completion.
+- `src/cot_redhanded/monitor.py`, `scorers.py`: the monitor calls and the scorers that use them.
+- `src/cot_redhanded/solvers.py`: the retry loop used when `max_attempts` is above 1.
+- `src/cot_redhanded/metrics.py`: `control_metrics` (catch rate at a fixed false positive rate, AUC) and its arithmetic. `analysis.py` is a command-line wrapper over it for saved logs.
+- `src/cot_redhanded/transcripts.py`: reads saved generation logs for `cot_redhanded_monitor`.
+- `src/cot_redhanded/data/`, `sandbox/`: data files, and the Docker sandbox the code runs in.
+- `src/cot_redhanded/run_configs/original.yaml`: the paper's design as an Inspect run config, with the source of each value.
 - `src/cot_redhanded/eval.yaml`: title, description, contributors, version and tasks. Edit it and run `make readmes`.
 - `src/cot_redhanded/README.md`: the eval's documentation, including the generated sections.
+- `docs/architecture.png`: the architecture diagram shown in the eval's README.
 - `tests/cot_redhanded/`: the tests.
 - `agent_artefacts/trajectory_analysis/inspect_scout/`: Scout scanners for the transcript audit.
+- `agent_artefacts/cot_redhanded/parity/`: the scripts that compared this implementation with the reference one, and wrote `tests/cot_redhanded/fixtures/`.
 
 ## Checks
 
