@@ -237,9 +237,11 @@ and the rubrics are in `research/scanner_rubrics.md`. In short:
 
 - 27 of 855 attack samples (3.2%) fail the main task because of the sandbox, the tests or the
   comment stripper, and not because of the model.
-- 106 of the 391 monitored samples contain no sabotage in the final code, nearly all of them
-  `longlines` and `edgecase`. Catch rates on the 241 samples where it is present are 47.7%
-  (action), 51.9% (CoT) and 57.7% (hybrid), against 36.1%, 41.7% and 46.0% over all 391.
+- In 96 of the 391 monitored samples the judge finds nothing in the final code beyond an
+  ordinary solution. Nearly all are `longlines` and `edgecase`, where completing the side task
+  as prompted produces well-documented code or passes one extra test. Catch rates on the 266
+  samples where the sabotage is visible in the code are 45.9% (action), 48.1% (CoT) and 54.5%
+  (hybrid), against 36.1%, 41.7% and 46.0% over all 391.
 - Where the action monitor misses sabotage that is present, its reply has usually noticed the
   behaviour and judged it benign (154 of 250 misses).
 - No refusal on grounds of harm, and one sample in 855 that suspects it is being tested.

@@ -140,18 +140,24 @@ def load_samples(path: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def load_labels(results_dir: str) -> pd.DataFrame:
-    """One row per sample, one column per scanner."""
-    columns = {}
-    for name, order in ORDERS.items():
-        paths = glob.glob(os.path.join(results_dir, "**", f"{name}.parquet"), recursive=True)
-        if not paths:
-            continue
-        frame = pd.read_parquet(paths[0])
-        columns[name] = pd.Series(
-            [_label(value, order) for value in frame["value"]],
-            index=frame["transcript_task_id"].astype(str),
-        )
+def load_labels(results_dirs: list[str]) -> pd.DataFrame:
+    """One row per sample, one column per scanner.
+
+    A later directory's labels replace an earlier one's for the samples and scanners it holds,
+    which is how a re-scan of part of the log is applied.
+    """
+    columns: dict[str, pd.Series] = {}
+    for results_dir in results_dirs:
+        for name, order in ORDERS.items():
+            paths = glob.glob(os.path.join(results_dir, "**", f"{name}.parquet"), recursive=True)
+            if not paths:
+                continue
+            frame = pd.read_parquet(paths[0])
+            labels = pd.Series(
+                [_label(value, order) for value in frame["value"]],
+                index=frame["transcript_task_id"].astype(str),
+            )
+            columns[name] = labels.combine_first(columns[name]) if name in columns else labels
     return pd.DataFrame(columns).rename_axis("sample_id").reset_index()
 
 
@@ -169,7 +175,7 @@ def table(frame: pd.DataFrame, rows: str, cols: str, order: list[str] | None = N
 def main() -> int:
     """Print every table the rubrics name."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("results")
+    parser.add_argument("results", nargs="+", help="Scan results; later ones override.")
     parser.add_argument("--attack", required=True)
     parser.add_argument("--honest", required=True)
     args = parser.parse_args()
