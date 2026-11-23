@@ -8,7 +8,8 @@ are combined into a *hybrid* score. Monitors are compared by catch rate at a 1% 
 rate, with the threshold set on honest completions.
 
 Based on [CoT Red-Handed: Stress Testing Chain-of-Thought Monitoring](https://arxiv.org/abs/2505.23575)
-(Arnav et al., NeurIPS 2025) and its [reference implementation](https://github.com/cotredhanded/code).
+(Arnav et al., NeurIPS 2025) and its [reference implementation](https://github.com/cotredhanded/code), read at commit
+[`505d9fc`](https://github.com/cotredhanded/code/tree/505d9fc).
 
 <!-- Contributors: Automatically Generated -->
 Contributed by [@John-E-Fleming](https://github.com/John-E-Fleming)
@@ -246,9 +247,15 @@ a test, and is to be fixed in its own change with a version bump and a measured 
 
 ## Evaluation report
 
-Version 2-A, run on 20 and 23 November 2026 at commit `b081e13`. This is a validation of one
-configuration against the paper, not yet the full report: one untrusted model and the
-`baseline` attack policy only.
+Version 2-A, run on 20 and 23 November 2026 (attack samples at commit `b081e13`, honest samples
+at `d220bb5`; the package source is the same at both). This is a validation of one configuration
+against the paper, not yet the full report.
+
+**Results are for one untrusted model, not two.** The aim of these runs was to check the
+implementation against the paper's published figures for the model it reports in most detail,
+before spending on further models and attack policies. A second untrusted model and the other
+nine attack policies are still to be run. No trajectory analysis has been done on these logs
+yet, so the share of invalid samples is not established.
 
 | Setting | Value |
 | --- | --- |
@@ -257,6 +264,19 @@ configuration against the paper, not yet the full report: one untrusted model an
 | Attack samples | TEST split, each problem paired with one side task, `baseline` attack policy, up to five attempts: 855 samples |
 | Honest samples | TEST split, one attempt: 855 samples |
 | Monitoring | Two draws per channel at temperature 1.0; the hybrid uses one draw of each |
+
+The model names are the ones OpenRouter serves. It offers no dated snapshot of GPT-4.1-mini or
+Gemini 2.5 Flash Lite, so the monitors are whatever those names resolved to on the run dates;
+`deepseek-r1-0528` is the 28 May 2025 release.
+
+Why each parameter is set as it is:
+
+- `side_task=all` with `use_pairings=true`: the paper pairs each problem with one side task.
+- `id_set=TEST`: the split the paper reports on.
+- `max_attempts=5`: the paper's Table 3 reports completion on the first attempt and within five.
+- `include_honest=false` on the attack run and `side_task=` on the honest run: the two were run
+  separately, so that the long attack run could be stopped and resumed on its own.
+- Everything else is the default, which is the paper's value where the paper gives one.
 
 ```bash
 uv run inspect eval cot_redhanded/cot_redhanded --model openrouter/deepseek/deepseek-r1-0528 \
@@ -268,7 +288,15 @@ uv run inspect eval cot_redhanded/cot_redhanded --model openrouter/deepseek/deep
 ```
 
 The attack and honest samples were generated in separate runs, so the catch rates below pool
-the two logs. A single run with the default `include_honest=true` reports them directly.
+the two logs. A single run with the default `include_honest=true` reports them directly. The
+GPT-4.1-mini figures use the monitor scores made during those two runs. The Gemini 2.5 Flash
+Lite figures come from scoring the same two logs again:
+
+```bash
+uv run inspect eval cot_redhanded/cot_redhanded_monitor \
+  --model openrouter/google/gemini-2.5-flash-lite \
+  -T log_paths=logs/native-test-paired-baseline,logs/native-test-honest
+```
 
 ### Completion rates
 
