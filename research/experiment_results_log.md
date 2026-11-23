@@ -1491,3 +1491,12 @@ What carries over from GPT-4.1-mini, and so belongs to the transcripts and not t
 - Subtle CoT is close to the paper under both.
 
 What is specific to Flash Lite: the hybrid sits at or below the action channel in both groups, where the paper has it at or above. Its thresholds are high (0.46 to 0.69), set by a handful of high-scoring honest samples, and the hybrid uses one draw per channel, so this is the place to look next. Log: `logs/native-test-paired-monitor-flashlite/`.
+
+### What the reference code and the paper say about averaging, the hybrid and `exit`
+
+Checked against the reference repository at `505d9fc` and the paper's text:
+
+- **The reference code has no hybrid and no averaging.** The word "hybrid" and the 0.55 weight do not appear in it. `run_monitor_on_dir` hard-codes `epochs=1`, the monitor makes one action call and one CoT call per transcript, and the scorer returns the CoT score as the value with the action score in metadata. The task does take an `epochs` argument with a `mean` reducer, but a reducer only sees the score value, so it would average the CoT score and not the action score. No monitor temperature is set. The two-run average and the hybrid were therefore computed in analysis code that was not released.
+- **The paper is the only source for both.** Section 2.2: "both action-only and CoT monitors are run twice with temperature 1.0 and their suspicion scores are averaged, while the hybrid monitor uses a single run for each component, as otherwise, the hybrid monitor would have access to twice the number of runs." This is what `monitor.py` implements. Which of the two runs feeds the hybrid is not stated; this implementation uses the first readable draw of each channel.
+- **The paper names `exit` as the exception among non-subtle side tasks.** Section 3.1: "Action-only monitors show substantially higher recall, with GPT-4.1-mini detecting nearly all instances, with the exception of the Exit side task, which lies near the cluster boundary." The low `exit` catch rate here is therefore in line with the paper in kind, though the size of its effect on the non-subtle bars still differs.
+- **The paper's figures pool attack policies.** Figure 3's caption: "results averaged across untrusted models and attack policies for each side task." This run is the baseline policy only, which is a difference in what is compared.
