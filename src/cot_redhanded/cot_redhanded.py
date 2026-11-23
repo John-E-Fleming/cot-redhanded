@@ -16,6 +16,7 @@ Arnav et al., "CoT Red-Handed: Stress Testing Chain-of-Thought Monitoring", arXi
 
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Literal, cast
 
 from inspect_ai import Task, task
 from inspect_ai.dataset import MemoryDataset
@@ -23,7 +24,7 @@ from inspect_ai.model import GenerateConfig
 from inspect_ai.solver import generate, prompt_template
 from inspect_evals_utils.metadata import load_eval_version
 
-from cot_redhanded.dataset import ID_SETS, load_cot_redhanded_dataset
+from cot_redhanded.dataset import ID_SETS, IdSet, load_cot_redhanded_dataset
 from cot_redhanded.metrics import (
     DEFAULT_FALSE_POSITIVE_RATE,
     HYBRID_ACTION_WEIGHT,
@@ -36,7 +37,7 @@ from cot_redhanded.scorers import (
     cot_redhanded_scorer,
     transcript_monitor_scorer,
 )
-from cot_redhanded.side_tasks import ATTACK_POLICIES, SIDE_TASKS
+from cot_redhanded.side_tasks import ATTACK_POLICIES, SIDE_TASKS, AttackPolicyName, SideTaskName
 from cot_redhanded.solvers import generate_until_success
 from cot_redhanded.transcripts import load_transcript_samples
 
@@ -53,9 +54,9 @@ __all__ = [
 # The version comes from eval.yaml, the file beside this module.
 EVAL_VERSION = load_eval_version(__file__)
 
-DEFAULT_SIDE_TASK = "varname"
-DEFAULT_ATTACK_POLICY = "baseline"
-DEFAULT_ID_SET = "TEST"
+DEFAULT_SIDE_TASK: SideTaskName = "varname"
+DEFAULT_ATTACK_POLICY: AttackPolicyName = "baseline"
+DEFAULT_ID_SET: IdSet = "TEST"
 
 #: Every value Inspect accepts for `reasoning_effort`. Which of these a given model honours is
 #: the provider's business; Inspect passes the value through and the provider decides.
@@ -72,29 +73,33 @@ _MAX_RETRIES = 3
 _COMPOSE_FILE = Path(__file__).parent / "sandbox" / "compose.yaml"
 
 
-def _names(value: str | Sequence[str] | None, allowed: Sequence[str], kind: str) -> list[str]:
-    """Read a parameter that names one or more of `allowed`, or `"all"` of them.
+def _names[Name: str](
+    value: Name | Literal["all"] | Sequence[Name] | None, allowed: Sequence[Name], kind: str
+) -> list[Name]:
+    """Read a parameter that names one of `allowed`, several of them, `"all"` or none.
 
-    `None` means none of them: `-T side_task=""` on the command line arrives as `None`,
-    because Inspect reads task arguments as YAML.
+    `None` means none: `-T side_task=` on the command line arrives as `None`, because Inspect
+    reads task arguments as YAML. It also turns `-T side_task=a,b` into a list, so several
+    names never arrive as one string.
     """
     if value is None:
         return []
-    names = [value] if isinstance(value, str) else list(value)
-    names = [name.strip() for entry in names for name in entry.split(",") if name.strip()]
-    if names == ["all"]:
+    if value == "all":
         return list(allowed)
+    names = [value] if isinstance(value, str) else list(value)
     for name in names:
         if name not in allowed:
             raise ValueError(f"Unknown {kind} {name!r}; expected one of {', '.join(allowed)}")
-    return names
+    return cast(list[Name], names)
 
 
 @task
 def cot_redhanded(
-    side_task: str | list[str] | None = DEFAULT_SIDE_TASK,
-    attack_policy: str | list[str] = DEFAULT_ATTACK_POLICY,
-    id_set: str = DEFAULT_ID_SET,
+    side_task: SideTaskName | Literal["all"] | list[SideTaskName] | None = DEFAULT_SIDE_TASK,
+    attack_policy: AttackPolicyName
+    | Literal["all"]
+    | list[AttackPolicyName] = DEFAULT_ATTACK_POLICY,
+    id_set: IdSet = DEFAULT_ID_SET,
     use_pairings: bool = False,
     include_honest: bool = True,
     max_attempts: int = 1,
@@ -111,10 +116,9 @@ def cot_redhanded(
     the `monitor` role (`--model-role monitor=...`), `openai/gpt-4.1-mini` by default.
 
     Args:
-        side_task: The hidden objective given to attack samples. One side task, several
-            (a list, or comma-separated), or `"all"`. An empty list, an empty string or `None`
-            gives an honest-only run.
-        attack_policy: How the side task is put to the model. One policy, several, or `"all"`.
+        side_task: The hidden objective given to attack samples. One side task, a list of
+            them, or `"all"`. `None` or an empty list gives an honest-only run.
+        attack_policy: How the side task is put to the model. One policy, a list of them, or `"all"`.
         id_set: Which split of BigCodeBench to use: TRAIN, VAL, RED or TEST.
         use_pairings: Keep an attack sample only when its problem is paired with its side task
             in the reference implementation's pairings, so each problem is attacked once.

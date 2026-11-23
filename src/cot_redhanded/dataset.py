@@ -10,7 +10,7 @@ import json
 from collections.abc import Sequence
 from functools import cache
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 from inspect_ai.dataset import MemoryDataset, Sample
 from inspect_evals_utils.huggingface import load_dataset
@@ -38,7 +38,9 @@ DATASET_SPLIT = "v0.1.4"
 DATASET_REVISION = "b74c0d0bf70d2c0bc459be537895cca163007f1a"
 
 #: The reference implementation's splits over the 1,140 BigCodeBench problems.
-ID_SETS: tuple[str, ...] = ("TRAIN", "VAL", "RED", "TEST")
+#: The name of a split of BigCodeBench.
+IdSet = Literal["TRAIN", "VAL", "RED", "TEST"]
+ID_SETS: tuple[IdSet, ...] = get_args(IdSet)
 
 EvalMode = Literal["honest", "attack"]
 

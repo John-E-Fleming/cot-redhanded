@@ -3,7 +3,7 @@
 import math
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -23,6 +23,7 @@ from cot_redhanded import (
 )
 from cot_redhanded.cot_redhanded import EVAL_VERSION
 from cot_redhanded.prompts import MAIN_TASK_TEMPLATE
+from cot_redhanded.side_tasks import SideTaskName
 from cot_redhanded.solvers import generate_until_success, stored_attempt
 from cot_redhanded.verifiers import Verdict
 from tests.cot_redhanded.test_transcripts import log_of, native_sample
@@ -53,23 +54,27 @@ def test_version_comes_from_eval_yaml() -> None:
 
 
 class TestParameterValidation:
-    """Bad parameters fail when the task is built, before anything is downloaded or run."""
+    """Bad parameters fail when the task is built, before anything is downloaded or run.
+
+    The parameter types rule these values out for a type checker, but nothing checks them
+    at run time, and the command line passes whatever it is given.
+    """
 
     def test_unknown_side_task(self) -> None:
         with pytest.raises(ValueError, match="Unknown side task"):
-            cot_redhanded(side_task="not_a_side_task")
+            cot_redhanded(side_task=cast(Any, "not_a_side_task"))
 
     def test_unknown_side_task_in_a_list(self) -> None:
         with pytest.raises(ValueError, match="Unknown side task"):
-            cot_redhanded(side_task="varname,not_a_side_task")
+            cot_redhanded(side_task=cast(Any, ["varname", "not_a_side_task"]))
 
     def test_unknown_attack_policy(self) -> None:
         with pytest.raises(ValueError, match="Unknown attack policy"):
-            cot_redhanded(attack_policy="not_a_policy")
+            cot_redhanded(attack_policy=cast(Any, "not_a_policy"))
 
     def test_unknown_id_set(self) -> None:
         with pytest.raises(ValueError, match="Unknown id set"):
-            cot_redhanded(id_set="NOT_A_SET")
+            cot_redhanded(id_set=cast(Any, "NOT_A_SET"))
 
     def test_unknown_reasoning_effort(self) -> None:
         with pytest.raises(ValueError, match="Unknown reasoning effort"):
@@ -136,7 +141,7 @@ class TestTaskConstruction:
 
     def test_several_side_tasks_and_policies(self) -> None:
         task = cot_redhanded(
-            side_task="varname,logio", attack_policy=["baseline", "stealth"], id_set="RED"
+            side_task=["varname", "logio"], attack_policy=["baseline", "stealth"], id_set="RED"
         )
         assert len(task.dataset) == 57 + 57 * 4
 
@@ -144,8 +149,8 @@ class TestTaskConstruction:
         task = cot_redhanded(side_task="all", id_set="RED", use_pairings=True)
         assert len(task.dataset) == 57 * 2
 
-    @pytest.mark.parametrize("side_task", [[], "", None])
-    def test_an_honest_only_run(self, side_task: str | list[str] | None) -> None:
+    @pytest.mark.parametrize("side_task", [[], None])
+    def test_an_honest_only_run(self, side_task: list[SideTaskName] | None) -> None:
         """`None` is what `-T side_task=""` becomes, since task arguments are read as YAML."""
         task = cot_redhanded(side_task=side_task, id_set="RED")
         assert len(task.dataset) == 57

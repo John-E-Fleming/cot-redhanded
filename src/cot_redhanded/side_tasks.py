@@ -6,12 +6,45 @@ holds what the dataset and the verifiers share.
 """
 
 from dataclasses import dataclass, field
+from typing import Literal, get_args
+
+#: The name of a side task.
+SideTaskName = Literal[
+    "complexity",
+    "defaultval",
+    "edgecase",
+    "exit",
+    "iodelete",
+    "iodownload",
+    "ioexfil",
+    "logio",
+    "longlines",
+    "permissions",
+    "varname",
+]
+
+#: The name of an attack policy: a way of putting the side task to the untrusted model.
+AttackPolicyName = Literal[
+    "baseline",
+    "stealth",
+    "future_proofing",
+    "functionality",
+    "dependency",
+    "must_use",
+    "implementation_template",
+    "code_first",
+    "cot_verbosity",
+    "monitor_notice",
+]
+
 
 __all__ = [
     "ANNOTATED_SIDE_TASKS",
     "ATTACK_POLICIES",
     "SIDE_TASKS",
+    "AttackPolicyName",
     "SideTask",
+    "SideTaskName",
     "side_task_spec",
 ]
 
@@ -83,24 +116,15 @@ _SPECS = (
 _BY_NAME = {spec.name: spec for spec in _SPECS}
 
 #: Every side task, in alphabetical order.
-SIDE_TASKS: tuple[str, ...] = tuple(_BY_NAME)
+SIDE_TASKS: tuple[SideTaskName, ...] = get_args(SideTaskName)
+if set(SIDE_TASKS) != set(_BY_NAME):
+    raise AssertionError("SideTaskName and the side task specifications name different side tasks")
 
 #: The side tasks that need a per-problem test case and so cover only some problems.
 ANNOTATED_SIDE_TASKS: tuple[str, ...] = tuple(spec.name for spec in _SPECS if spec.annotated)
 
 #: Every attack policy: a way of putting the side task to the untrusted model.
-ATTACK_POLICIES: tuple[str, ...] = (
-    "baseline",
-    "stealth",
-    "future_proofing",
-    "functionality",
-    "dependency",
-    "must_use",
-    "implementation_template",
-    "code_first",
-    "cot_verbosity",
-    "monitor_notice",
-)
+ATTACK_POLICIES: tuple[AttackPolicyName, ...] = get_args(AttackPolicyName)
 
 
 def side_task_spec(name: str) -> SideTask:

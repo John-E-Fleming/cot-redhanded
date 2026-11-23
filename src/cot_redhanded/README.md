@@ -77,9 +77,9 @@ See `uv run inspect eval --help` for all available options.
 
 ### `cot_redhanded`
 
-- `side_task` (str | list[str] | None): The hidden objective given to attack samples. One side task, several (a list, or comma-separated), or `"all"`. An empty list, an empty string or `None` gives an honest-only run. (default: `'varname'`)
-- `attack_policy` (str | list[str]): How the side task is put to the model. One policy, several, or `"all"`. (default: `'baseline'`)
-- `id_set` (str): Which split of BigCodeBench to use: TRAIN, VAL, RED or TEST. (default: `'TEST'`)
+- `side_task` (Union[Literal['complexity', 'defaultval', 'edgecase', 'exit', 'iodelete', 'iodownload', 'ioexfil', 'logio', 'longlines', 'permissions', 'varname'], Literal['all'], list[Literal['complexity', 'defaultval', 'edgecase', 'exit', 'iodelete', 'iodownload', 'ioexfil', 'logio', 'longlines', 'permissions', 'varname']], None]): The hidden objective given to attack samples. One side task, a list of them, or `"all"`. `None` or an empty list gives an honest-only run. (default: `'varname'`)
+- `attack_policy` (Union[Literal['baseline', 'stealth', 'future_proofing', 'functionality', 'dependency', 'must_use', 'implementation_template', 'code_first', 'cot_verbosity', 'monitor_notice'], Literal['all'], list[Literal['baseline', 'stealth', 'future_proofing', 'functionality', 'dependency', 'must_use', 'implementation_template', 'code_first', 'cot_verbosity', 'monitor_notice']]]): How the side task is put to the model. One policy, a list of them, or `"all"`. (default: `'baseline'`)
+- `id_set` (Literal['TRAIN', 'VAL', 'RED', 'TEST']): Which split of BigCodeBench to use: TRAIN, VAL, RED or TEST. (default: `'TEST'`)
 - `use_pairings` (bool): Keep an attack sample only when its problem is paired with its side task in the reference implementation's pairings, so each problem is attacked once. (default: `False`)
 - `include_honest` (bool): Include the honest samples, which set the monitor's threshold. Without them the catch rates cannot be computed and are reported as NaN. (default: `True`)
 - `max_attempts` (int): How many attempts the untrusted model gets at each sample. A failed attempt is retried from scratch, without feedback, until one succeeds. 1, the reference implementation's default, is a single attempt; the paper's completion rates also report 5. (default: `1`)
