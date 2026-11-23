@@ -27,6 +27,7 @@ This project uses `uv`. Do not use `pip`, bare `python` or bare `pytest`.
 - `src/cot_redhanded/run_configs/original.yaml`: the paper's design as an Inspect run config, with the source of each value.
 - `src/cot_redhanded/eval.yaml`: title, description, contributors, version and tasks. Edit it and run `make readmes`.
 - `src/cot_redhanded/README.md`: the eval's documentation, including the generated sections.
+- `docs/architecture.png`: the architecture diagram shown in the eval's README.
 - `tests/cot_redhanded/`: the tests.
 - `agent_artefacts/trajectory_analysis/inspect_scout/`: Scout scanners for the transcript audit.
 - `agent_artefacts/cot_redhanded/parity/`: the scripts that compared this implementation with the reference one, and wrote `tests/cot_redhanded/fixtures/`.

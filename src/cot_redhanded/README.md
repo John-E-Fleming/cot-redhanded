@@ -384,6 +384,12 @@ Completion rates do not move at the default of one attempt.
 
 ## Architecture
 
+![The pipeline: a prompt holding the main task and, for attack samples, a side task under an attack policy; one generation by the untrusted model; a verifier that runs the unit tests and the side task check in a Docker sandbox; and a trusted monitor whose suspicion score is compared with a threshold set on honest samples.](../../docs/architecture.png)
+
+The diagram shows the paper's pipeline and marks what the paper describes but the reference code
+does not have. In this package all four stages run inside the one `cot_redhanded` task, and
+`cot_redhanded_monitor` runs the last stage again on saved logs:
+
 ```text
             ┌──────────────────────── cot_redhanded ────────────────────────┐
             │                                                               │
