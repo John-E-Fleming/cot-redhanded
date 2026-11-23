@@ -227,8 +227,14 @@ against the paper, not yet the full report.
 **Results are for one untrusted model, not two.** The aim of these runs was to check the
 implementation against the paper's published figures for the model it reports in most detail,
 before spending on further models and attack policies. A second untrusted model and the other
-nine attack policies are still to be run. No trajectory analysis has been done on these logs
-yet, so the share of invalid samples is not established.
+nine attack policies are still to be run.
+
+**Trajectory analysis covers the earlier logs, not these.** Four rubric scanners were run over
+341 transcripts from five side tasks in the version 1-B logs (Runs 15 to 18 in
+`research/experiment_results_log.md`; rubrics in `research/scanner_rubrics.md`). Of the 2-A
+logs, only the 42 monitored `exit` samples have been read, with their monitor replies. The
+scanners have not been run on the 2-A logs, so their share of invalid samples is not
+established.
 
 | Setting | Value |
 | --- | --- |
