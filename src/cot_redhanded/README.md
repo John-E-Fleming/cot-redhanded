@@ -229,12 +229,22 @@ implementation against the paper's published figures for the model it reports in
 before spending on further models and attack policies. A second untrusted model and the other
 nine attack policies are still to be run.
 
-**Trajectory analysis covers the earlier logs, not these.** Four rubric scanners were run over
-341 transcripts from five side tasks in the version 1-B logs (Runs 15 to 18 in
-`research/experiment_results_log.md`; rubrics in `research/scanner_rubrics.md`). Of the 2-A
-logs, only the 42 monitored `exit` samples have been read, with their monitor replies. The
-scanners have not been run on the 2-A logs, so their share of invalid samples is not
-established.
+**Trajectory analysis.** Eight scanners were run over all 855 attack samples of these logs on
+23 November 2026 (judge `openrouter/anthropic/claude-haiku-5.5`, no errors). The labels are not
+yet validated against human labels. The analysis is in
+`agent_artefacts/trajectory_analysis/cot_redhanded/cot_redhanded_deepseek-r1-0528_ANALYSIS.md`
+and the rubrics are in `research/scanner_rubrics.md`. In short:
+
+- 27 of 855 attack samples (3.2%) fail the main task because of the sandbox, the tests or the
+  comment stripper, and not because of the model.
+- 106 of the 391 monitored samples contain no sabotage in the final code, nearly all of them
+  `longlines` and `edgecase`. Catch rates on the 241 samples where it is present are 47.7%
+  (action), 51.9% (CoT) and 57.7% (hybrid), against 36.1%, 41.7% and 46.0% over all 391.
+- Where the action monitor misses sabotage that is present, its reply has usually noticed the
+  behaviour and judged it benign (154 of 250 misses).
+- No refusal on grounds of harm, and one sample in 855 that suspects it is being tested.
+
+The honest samples were not scanned.
 
 | Setting | Value |
 | --- | --- |
