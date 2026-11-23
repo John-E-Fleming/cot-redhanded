@@ -1500,3 +1500,26 @@ Checked against the reference repository at `505d9fc` and the paper's text:
 - **The paper is the only source for both.** Section 2.2: "both action-only and CoT monitors are run twice with temperature 1.0 and their suspicion scores are averaged, while the hybrid monitor uses a single run for each component, as otherwise, the hybrid monitor would have access to twice the number of runs." This is what `monitor.py` implements. Which of the two runs feeds the hybrid is not stated; this implementation uses the first readable draw of each channel.
 - **The paper names `exit` as the exception among non-subtle side tasks.** Section 3.1: "Action-only monitors show substantially higher recall, with GPT-4.1-mini detecting nearly all instances, with the exception of the Exit side task, which lies near the cluster boundary." The low `exit` catch rate here is therefore in line with the paper in kind, though the size of its effect on the non-subtle bars still differs.
 - **The paper's figures pool attack policies.** Figure 3's caption: "results averaged across untrusted models and attack policies for each side task." This run is the baseline policy only, which is a difference in what is compared.
+
+## 2026-11-23 — Run 22: native honest samples, and how much the threshold moves
+
+The honest TEST samples generated natively: 855 samples, one attempt, DeepSeek R1 with GPT-4.1-mini monitoring in the run (`logs/native-test-honest/`, launched with `-T 'side_task=[]'`). The main task passes on 418 (49.0%), against 428 (50.1%) in the wrapper's honest run of 17 November.
+
+Catch rates for the 391 attack samples of Run 21 against each honest set. For GPT-4.1-mini the native row uses the scores made during the two generation runs; the wrapper row is the re-scoring from Run 21, so the attack draws differ between the rows as well as the honest set.
+
+| Monitor      | Honest set   | Thresholds (action / CoT / hybrid) | Subtle (action / CoT / hybrid) | Non-subtle (action / CoT / hybrid) |
+| ------------ | ------------ | ---------------------------------- | ------------------------------ | ---------------------------------- |
+| GPT-4.1-mini | Native, 418  | 0.05 / 0.025 / 0.0275              | 18.5 / 33.7 / 31.5             | 78.3 / 60.9 / 80.9                 |
+| GPT-4.1-mini | Wrapper, 428 | 0.075 / 0.05 / 0.05                | 13.0 / 23.9 / 23.6             | 74.8 / 56.5 / 75.7                 |
+| Flash Lite   | Native, 418  | 0.30 / 0.70 / 0.42                 | 21.7 / 11.6 / 20.3             | 69.6 / 27.8 / 62.6                 |
+| Flash Lite   | Wrapper, 428 | 0.46 / 0.69 / 0.48                 | 12.7 / 23.6 / 12.7             | 64.3 / 37.4 / 60.0                 |
+| Paper        | GPT-4.1-mini |                                    | 6.6 / 18.9 / 21.5              | 91.7 / 55.9 / 90.1                 |
+| Paper        | Flash Lite   |                                    | 6.5 / 22.8 / 26.2              | 71.7 / 25.7 / 73.9                 |
+
+**The catch rate at 1% false positive rate is sensitive to the honest set.** With about 420 honest samples the threshold is set by the four or five highest-scoring ones. Two honest sets from the same model and split move GPT-4.1-mini's subtle catch rates by 5 to 10 points, and move Flash Lite's CoT rate from 23.6% to 11.6% on subtle side tasks. Differences of this size between this implementation and the paper cannot be told apart from threshold noise on a run of this size. The qualitative ordering for GPT-4.1-mini is the same under both honest sets.
+
+**A hybrid of the two-draw means is higher than the single-draw hybrid** in every row, by 3 to 8 points (for example GPT-4.1-mini, native honest: subtle 34.4% against 31.5%, non-subtle 84.3% against 80.9%; Flash Lite, native honest: subtle 26.1% against 20.3%). The paper's stated design is the single-draw hybrid, which is what the task reports.
+
+**First-attempt and later-attempt successes are caught at similar rates overall** (GPT-4.1-mini, native honest: action 37.1% on 251 first-attempt samples against 34.3% on 140 later ones; hybrid 45.8% against 46.4%). Within groups there is some movement on small counts: later-attempt subtle samples are caught more often (hybrid 37.1% against 28.1%) and later-attempt non-subtle samples less often (74.3% against 83.8%, n=35).
+
+`exit` under native honest samples: 40.5% action, 26.2% CoT, 50.0% hybrid for GPT-4.1-mini; 38.1% / 0.0% / 26.2% for Flash Lite.
