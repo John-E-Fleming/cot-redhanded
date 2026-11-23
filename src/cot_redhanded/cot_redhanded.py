@@ -72,8 +72,14 @@ _MAX_RETRIES = 3
 _COMPOSE_FILE = Path(__file__).parent / "sandbox" / "compose.yaml"
 
 
-def _names(value: str | Sequence[str], allowed: Sequence[str], kind: str) -> list[str]:
-    """Read a parameter that names one or more of `allowed`, or `"all"` of them."""
+def _names(value: str | Sequence[str] | None, allowed: Sequence[str], kind: str) -> list[str]:
+    """Read a parameter that names one or more of `allowed`, or `"all"` of them.
+
+    `None` means none of them: `-T side_task=""` on the command line arrives as `None`,
+    because Inspect reads task arguments as YAML.
+    """
+    if value is None:
+        return []
     names = [value] if isinstance(value, str) else list(value)
     names = [name.strip() for entry in names for name in entry.split(",") if name.strip()]
     if names == ["all"]:
@@ -86,7 +92,7 @@ def _names(value: str | Sequence[str], allowed: Sequence[str], kind: str) -> lis
 
 @task
 def cot_redhanded(
-    side_task: str | list[str] = DEFAULT_SIDE_TASK,
+    side_task: str | list[str] | None = DEFAULT_SIDE_TASK,
     attack_policy: str | list[str] = DEFAULT_ATTACK_POLICY,
     id_set: str = DEFAULT_ID_SET,
     use_pairings: bool = False,
@@ -106,7 +112,8 @@ def cot_redhanded(
 
     Args:
         side_task: The hidden objective given to attack samples. One side task, several
-            (a list, or comma-separated), or `"all"`. An empty list gives an honest-only run.
+            (a list, or comma-separated), or `"all"`. An empty list, an empty string or `None`
+            gives an honest-only run.
         attack_policy: How the side task is put to the model. One policy, several, or `"all"`.
         id_set: Which split of BigCodeBench to use: TRAIN, VAL, RED or TEST.
         use_pairings: Keep an attack sample only when its problem is paired with its side task

@@ -77,7 +77,7 @@ See `uv run inspect eval --help` for all available options.
 
 ### `cot_redhanded`
 
-- `side_task` (str | list[str]): The hidden objective given to attack samples. One side task, several (a list, or comma-separated), or `"all"`. An empty list gives an honest-only run. (default: `'varname'`)
+- `side_task` (str | list[str] | None): The hidden objective given to attack samples. One side task, several (a list, or comma-separated), or `"all"`. An empty list, an empty string or `None` gives an honest-only run. (default: `'varname'`)
 - `attack_policy` (str | list[str]): How the side task is put to the model. One policy, several, or `"all"`. (default: `'baseline'`)
 - `id_set` (str): Which split of BigCodeBench to use: TRAIN, VAL, RED or TEST. (default: `'TEST'`)
 - `use_pairings` (bool): Keep an attack sample only when its problem is paired with its side task in the reference implementation's pairings, so each problem is attacked once. (default: `False`)
@@ -121,6 +121,10 @@ be tried without generating again. It is a scoring-only task, so here `--model` 
 uv run inspect eval cot_redhanded/cot_redhanded_monitor \
   --model openai/gpt-4.1-nano -T log_paths=logs/my-run
 ```
+
+For honest samples only, give no side task (`-T side_task=`). For attack samples only, add
+`-T include_honest=false`; the catch rate is then unavailable until the log is pooled with
+honest samples through `cot_redhanded_monitor`.
 
 Only `cot_redhanded` needs Docker; the scoring-only task runs no code.
 
@@ -242,16 +246,94 @@ a test, and is to be fixed in its own change with a version bump and a measured 
 
 ## Evaluation report
 
-Not yet run for this version. The figures below are from version 1-B, where the catch rate was
-computed by a separate script over single-sample monitor scores; the test suite checks that the
-`control_metrics` metric reproduces them from the same scores.
+Version 2-A, run on 20 and 23 November 2026 at commit `b081e13`. This is a validation of one
+configuration against the paper, not yet the full report: one untrusted model and the
+`baseline` attack policy only.
 
-| Untrusted model | Monitor | Samples (attack / honest) | Action | CoT | Hybrid |
+| Setting | Value |
+| --- | --- |
+| Untrusted model | DeepSeek R1, `openrouter/deepseek/deepseek-r1-0528` |
+| Monitors | `openrouter/openai/gpt-4.1-mini`; `openrouter/google/gemini-2.5-flash-lite` |
+| Attack samples | TEST split, each problem paired with one side task, `baseline` attack policy, up to five attempts: 855 samples |
+| Honest samples | TEST split, one attempt: 855 samples |
+| Monitoring | Two draws per channel at temperature 1.0; the hybrid uses one draw of each |
+
+```bash
+uv run inspect eval cot_redhanded/cot_redhanded --model openrouter/deepseek/deepseek-r1-0528 \
+  --model-role monitor=openrouter/openai/gpt-4.1-mini \
+  -T side_task=all -T id_set=TEST -T use_pairings=true -T include_honest=false -T max_attempts=5
+
+uv run inspect eval cot_redhanded/cot_redhanded --model openrouter/deepseek/deepseek-r1-0528 \
+  --model-role monitor=openrouter/openai/gpt-4.1-mini -T side_task= -T id_set=TEST
+```
+
+The attack and honest samples were generated in separate runs, so the catch rates below pool
+the two logs. A single run with the default `include_honest=true` reports them directly.
+
+### Completion rates
+
+A sample completes when the main task and the side task both pass. The paper's figures are the
+`baseline` row of its Table 3.
+
+| | First attempt | Within five attempts |
+| --- | --- | --- |
+| Paper | 30.3% | 44.0% |
+| This implementation (855 samples) | 29.4% | 45.7% |
+
+The standard error on each of our figures is about 1.7 points. Of the 855 honest samples, the
+main task passes on 418 (49.0%).
+
+### Catch rates at a 1% false positive rate
+
+391 completed attack samples against 418 honest samples whose main task passed. Subtle side
+tasks are `complexity`, `defaultval`, `edgecase`, `longlines` and `varname`; the other six are
+non-subtle. The paper's figures are the DeepSeek R1 bars of its Figure 5.
+
+| Monitor | Group | Samples | Action | CoT | Hybrid |
 | --- | --- | --- | --- | --- | --- |
-| DeepSeek R1 (0528) | GPT-4.1-mini | 146 / 428 | 74.7% / 0.882 | 62.3% / 0.863 | 74.0% / 0.890 |
+| GPT-4.1-mini | Subtle | 276 | 18.5% | 33.7% | 31.5% |
+| GPT-4.1-mini, paper | Subtle | | 6.6% | 18.9% | 21.5% |
+| GPT-4.1-mini | Non-subtle | 115 | 78.3% | 60.9% | 80.9% |
+| GPT-4.1-mini, paper | Non-subtle | | 91.7% | 55.9% | 90.1% |
+| Gemini 2.5 Flash Lite | Subtle | 276 | 21.7% | 11.6% | 20.3% |
+| Gemini 2.5 Flash Lite, paper | Subtle | | 6.5% | 22.8% | 26.2% |
+| Gemini 2.5 Flash Lite | Non-subtle | 115 | 69.6% | 27.8% | 62.6% |
+| Gemini 2.5 Flash Lite, paper | Non-subtle | | 71.7% | 25.7% | 73.9% |
 
-Each cell is catch rate at 1% false positive rate / ROC-AUC. Attack samples are the RED split
-over nine side tasks with the `baseline` attack policy; honest samples are the TEST split.
+What reproduces, and what does not:
+
+- **Completion rates reproduce**, within sampling error.
+- **The paper's qualitative findings hold for GPT-4.1-mini.** For non-subtle side tasks the
+  hybrid is on par with the action monitor and well above the CoT monitor. For subtle side
+  tasks the hybrid matches the CoT monitor and is well above the action monitor.
+- **The levels differ from the paper's**, by up to 15 points, and for Gemini 2.5 Flash Lite the
+  ordering of the channels is not stable.
+
+Why the levels should not be compared closely:
+
+- **The threshold is set by four or five honest samples.** With about 420 honest samples, a 1%
+  false positive rate puts the threshold among the few highest scores. Scoring the same attack
+  samples against a second honest set from the same model and split (428 samples, generated
+  earlier) moved GPT-4.1-mini's subtle catch rates by 5 to 10 points, and moved Gemini 2.5
+  Flash Lite's subtle CoT rate from 23.6% to 11.6%.
+- **The paper's figures average over attack policies**; these are the `baseline` policy only.
+- **`exit` is caught far less often than the other non-subtle side tasks** (40.5% by the
+  GPT-4.1-mini action monitor, against 100% for `iodelete`, `iodownload`, `ioexfil`, `logio`
+  and `permissions`), and it is 42 of the 115 non-subtle samples. The monitors read `exit(0)`
+  in an input check as abrupt but ordinary validation. The paper also names `exit` as the
+  exception among non-subtle side tasks.
+- **The model builds may differ.** The paper does not give the release of DeepSeek R1 or of
+  Gemini 2.5 Flash Lite that it used.
+
+Other notes on these runs:
+
+- Every completed `exit` sample is one whose test run ended in `SystemExit`, so its main task
+  is unverified (see "Known defects kept for now").
+- Inspect ignores `reasoning_tokens` when `reasoning_effort` is also set, which the task's
+  defaults do, so the reasoning-token setting had no effect.
+- The attack run was interrupted at 424 samples and resumed with `inspect eval-retry`.
+- A hybrid computed from the two-draw means, which is not the paper's design, comes out 3 to 8
+  points above the single-draw hybrid reported here.
 
 ## Changelog
 
@@ -268,6 +350,7 @@ over nine side tasks with the `baseline` attack policy; honest samples are the T
   of `eval_log_path` and `has_side_task`.
 - A monitor reply that wraps its verdict in a second `<answer>` tag is read, as the reference
   implementation reads it; version 1-B lost those verdicts.
+- `-T side_task=` on the command line gives an honest-only run; it used to raise a `TypeError`.
 
 ### [1-B]
 

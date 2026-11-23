@@ -144,9 +144,14 @@ class TestTaskConstruction:
         task = cot_redhanded(side_task="all", id_set="RED", use_pairings=True)
         assert len(task.dataset) == 57 * 2
 
-    def test_an_honest_only_run(self) -> None:
-        task = cot_redhanded(side_task=[], id_set="RED")
+    @pytest.mark.parametrize("side_task", [[], "", None])
+    def test_an_honest_only_run(self, side_task: str | list[str] | None) -> None:
+        """`None` is what `-T side_task=""` becomes, since task arguments are read as YAML."""
+        task = cot_redhanded(side_task=side_task, id_set="RED")
         assert len(task.dataset) == 57
+        assert all(
+            sample.metadata and sample.metadata["eval_mode"] == "honest" for sample in task.dataset
+        )
 
     def test_the_prompt_the_untrusted_model_receives(self) -> None:
         """The rendered prompt, which is the template around the problem with its side task."""
