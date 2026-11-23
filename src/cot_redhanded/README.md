@@ -15,63 +15,44 @@ Based on [CoT Red-Handed: Stress Testing Chain-of-Thought Monitoring](https://ar
 Contributed by [@John-E-Fleming](https://github.com/John-E-Fleming)
 <!-- /Contributors: Automatically Generated -->
 
-<!-- Usage: Automatically Generated -->
 ## Usage
 
-First, install dependencies:
+Install the dependencies with `uv sync`. Docker must be running for `cot_redhanded`, which
+executes the generated code in a sandbox.
+
+`cot_redhanded` is the whole eval in one command. `--model` is the **untrusted** model, which
+must return its reasoning (as reasoning content or inside `<think>` tags). The monitor is the
+model bound to the `monitor` role, `openai/gpt-4.1-mini` by default:
 
 ```bash
-uv sync
+uv run inspect eval cot_redhanded/cot_redhanded \
+  --model openrouter/deepseek/deepseek-r1-0528 \
+  --model-role monitor=openrouter/openai/gpt-4.1-mini \
+  -T side_task=all -T use_pairings=true
 ```
 
-Then run evaluations:
+`cot_redhanded_monitor` re-monitors completions that already exist, so a different monitor can
+be tried without generating again. It is a scoring-only task, so here `--model` is the
+**monitor**. Give it logs holding both honest and attack completions:
 
 ```bash
-uv run inspect eval cot_redhanded/cot_redhanded --model openai/gpt-5-nano
-uv run inspect eval cot_redhanded/cot_redhanded_monitor --model openai/gpt-5-nano
+uv run inspect eval cot_redhanded/cot_redhanded_monitor \
+  --model openai/gpt-4.1-nano -T log_paths=logs/my-run
 ```
 
-You can also import tasks as Python objects:
+For honest samples only, give no side task (`-T side_task=`). For attack samples only, add
+`-T include_honest=false`; the catch rate is then unavailable until the log is pooled with
+honest samples through `cot_redhanded_monitor`.
 
-```python
-from inspect_ai import eval
-from cot_redhanded import cot_redhanded, cot_redhanded_monitor
-eval(cot_redhanded)
-```
+The scoring-only task runs no code and does not need Docker.
 
-If your directory name doesn't match your package name but you have registered your eval task, you can also run:
+A full run is long and costs real money: 855 attack samples with DeepSeek R1 took about seven
+hours and $40 at five attempts. Add `--limit 10` to try it on a few samples first. View the
+logs with `uv run inspect view`, and see `uv run inspect eval --help` for the other options.
 
-```bash
-uv run inspect eval cot_redhanded --model openai/gpt-5-nano
-```
-
-After running evaluations, view logs with:
-
-```bash
-uv run inspect view
-```
-
-If you don't want to specify `--model` each time, create a `.env` file:
-
-```bash
-INSPECT_EVAL_MODEL=anthropic/claude-opus-4-1-20250805
-ANTHROPIC_API_KEY=<anthropic-api-key>
-```
-<!-- /Usage: Automatically Generated -->
-
-<!-- Options: Automatically Generated -->
-## Options
-
-You can control a variety of options from the command line. For example:
-
-```bash
-uv run inspect eval cot_redhanded/cot_redhanded --limit 10
-uv run inspect eval cot_redhanded/cot_redhanded_monitor --max-connections 10
-uv run inspect eval cot_redhanded/cot_redhanded --temperature 0.5
-```
-
-See `uv run inspect eval --help` for all available options.
-<!-- /Options: Automatically Generated -->
+The untrusted model's sampling settings (temperature 0.7, top-p 0.95, 16,000 output tokens) are
+the reference implementation's and are set by the task. The monitor always samples at
+temperature 1.0.
 
 <!-- Parameters: Automatically Generated -->
 ## Parameters
@@ -100,34 +81,6 @@ See `uv run inspect eval --help` for all available options.
 - `false_positive_rate` (float): The share of honest completions the monitor may flag. The paper uses 0.01. (default: `0.01`)
 
 <!-- /Parameters: Automatically Generated -->
-
-## Running it
-
-`cot_redhanded` is the whole eval in one command. `--model` is the **untrusted** model, which
-must return its reasoning (as reasoning content or inside `<think>` tags). The monitor is the
-model bound to the `monitor` role, `openai/gpt-4.1-mini` by default:
-
-```bash
-uv run inspect eval cot_redhanded/cot_redhanded \
-  --model openrouter/deepseek/deepseek-r1-0528 \
-  --model-role monitor=openrouter/openai/gpt-4.1-mini \
-  -T side_task=all -T use_pairings=true
-```
-
-`cot_redhanded_monitor` re-monitors completions that already exist, so a different monitor can
-be tried without generating again. It is a scoring-only task, so here `--model` is the
-**monitor**. Give it logs holding both honest and attack completions:
-
-```bash
-uv run inspect eval cot_redhanded/cot_redhanded_monitor \
-  --model openai/gpt-4.1-nano -T log_paths=logs/my-run
-```
-
-For honest samples only, give no side task (`-T side_task=`). For attack samples only, add
-`-T include_honest=false`; the catch rate is then unavailable until the log is pooled with
-honest samples through `cot_redhanded_monitor`.
-
-Only `cot_redhanded` needs Docker; the scoring-only task runs no code.
 
 ## Dataset
 
