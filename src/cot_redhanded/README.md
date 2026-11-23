@@ -40,6 +40,19 @@ uv run inspect eval cot_redhanded/cot_redhanded_monitor \
   --model openai/gpt-4.1-nano -T log_paths=logs/my-run
 ```
 
+The paper's full design (the TEST split, every problem paired with one side task, all ten
+attack policies, five attempts, honest samples included) is saved as a run config, with the
+source of each value recorded in the file:
+
+```bash
+uv run inspect eval --run-config src/cot_redhanded/run_configs/original.yaml \
+  --model openrouter/deepseek/deepseek-r1-0528 \
+  --model-role monitor=openrouter/openai/gpt-4.1-mini
+```
+
+That is 9,405 samples. Add `-T attack_policy=baseline` for one attack policy; command-line
+flags override the file.
+
 For honest samples only, give no side task (`-T side_task=`). For attack samples only, add
 `-T include_honest=false`; the catch rate is then unavailable until the log is pooled with
 honest samples through `cot_redhanded_monitor`.
@@ -345,6 +358,7 @@ Completion rates do not move at the default of one attempt.
 - A monitor reply that wraps its verdict in a second `<answer>` tag is read, as the reference
   implementation reads it; version 1-B lost those verdicts.
 - `-T side_task=` on the command line gives an honest-only run; it used to raise a `TypeError`.
+- `run_configs/original.yaml` holds the paper's design for `--run-config`.
 
 ### [1-B]
 

@@ -24,6 +24,7 @@ This project uses `uv`. Do not use `pip`, bare `python` or bare `pytest`.
 - `src/cot_redhanded/metrics.py`: `control_metrics` (catch rate at a fixed false positive rate, AUC) and its arithmetic. `analysis.py` is a command-line wrapper over it for saved logs.
 - `src/cot_redhanded/transcripts.py`: reads saved generation logs for `cot_redhanded_monitor`.
 - `src/cot_redhanded/data/`, `sandbox/`: data files, and the Docker sandbox the code runs in.
+- `src/cot_redhanded/run_configs/original.yaml`: the paper's design as an Inspect run config, with the source of each value.
 - `src/cot_redhanded/eval.yaml`: title, description, contributors, version and tasks. Edit it and run `make readmes`.
 - `src/cot_redhanded/README.md`: the eval's documentation, including the generated sections.
 - `tests/cot_redhanded/`: the tests.
