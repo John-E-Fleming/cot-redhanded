@@ -1,3 +1,5 @@
+# Adapted from https://github.com/cotredhanded/code at commit 505d9fc (monitor/inspect_monitor.py).
+# Copyright (c) 2025 cotredhanded, MIT License. See NOTICE.
 """Turn saved generation logs into samples for the scoring-only monitor task.
 
 `cot_redhanded_monitor` re-monitors completions that already exist, so a second monitor can be

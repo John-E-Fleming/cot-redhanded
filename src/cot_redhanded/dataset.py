@@ -1,3 +1,5 @@
+# Adapted from https://github.com/cotredhanded/code at commit 505d9fc (tasks/base.py).
+# Copyright (c) 2025 cotredhanded, MIT License. See NOTICE.
 """Build the honest and attack samples from BigCodeBench.
 
 Every sample is one BigCodeBench problem run in one **eval mode**. An honest sample asks for the

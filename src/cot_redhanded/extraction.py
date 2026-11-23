@@ -1,3 +1,5 @@
+# Adapted from https://github.com/cotredhanded/code at commit 505d9fc (tasks/base.py, monitor/inspect_monitor.py and monitor/monitor_utils.py).
+# Copyright (c) 2025 cotredhanded, MIT License. See NOTICE.
 """Pull the code and the chain of thought out of what the untrusted model wrote.
 
 The same extraction feeds two consumers: the verifiers, which run the code, and the monitor,

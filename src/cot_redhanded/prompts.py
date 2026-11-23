@@ -1,3 +1,5 @@
+# Adapted from https://github.com/cotredhanded/code at commit 505d9fc (tasks/config.py and the YAML files under tasks/prompts/ and monitor/prompts/).
+# Copyright (c) 2025 cotredhanded, MIT License. See NOTICE.
 """Every prompt the eval sends, as module-level constants.
 
 The texts are the reference implementation's, character for character: the main-task template

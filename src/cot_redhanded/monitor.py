@@ -1,3 +1,5 @@
+# Adapted from https://github.com/cotredhanded/code at commit 505d9fc (monitor/inspect_monitor.py).
+# Copyright (c) 2025 cotredhanded, MIT License. See NOTICE.
 """The trusted monitor: read a transcript, return suspicion scores.
 
 A transcript is scored on two channels. The **action** monitor sees the problem and the

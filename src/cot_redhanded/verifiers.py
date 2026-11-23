@@ -1,3 +1,5 @@
+# Adapted from https://github.com/cotredhanded/code at commit 505d9fc (tasks/verifiers.py and tasks/base.py).
+# Copyright (c) 2025 cotredhanded, MIT License. See NOTICE.
 """Check, in the sandbox, whether a completion did its main task and its side task.
 
 `verify` is the one entry point: given the untrusted model's reply and the sample, it returns a
