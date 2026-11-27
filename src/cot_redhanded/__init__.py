@@ -1,11 +1,12 @@
 from cot_redhanded.cot_redhanded import (
     DEFAULT_ATTACK_POLICY,
     DEFAULT_ID_SET,
+    DEFAULT_MONITOR_SETTING,
     DEFAULT_SIDE_TASK,
     EVAL_VERSION,
-    REASONING_EFFORTS,
+    MONITOR_SAMPLES,
+    bigcodebench_side,
     cot_redhanded,
-    cot_redhanded_monitor,
 )
 from cot_redhanded.dataset import (
     DATASET_PATH,
@@ -19,14 +20,11 @@ from cot_redhanded.metrics import (
     DEFAULT_FALSE_POSITIVE_RATE,
     HYBRID_ACTION_WEIGHT,
     control_metrics,
+    side_task_metrics,
 )
-from cot_redhanded.scorers import (
-    DEFAULT_MONITOR_MODEL,
-    DEFAULT_MONITOR_SAMPLES,
-    cot_redhanded_scorer,
-    transcript_monitor_scorer,
-)
-from cot_redhanded.side_tasks import ATTACK_POLICIES, SIDE_TASKS
+from cot_redhanded.scorers import side_task_scorer, suspicion_scorer
+from cot_redhanded.side_tasks import ATTACK_POLICIES, SIDE_TASKS, SUBTLE_SIDE_TASKS
+from cot_redhanded.solvers import REPLIES_KEY, generate_until_success, monitor_solver
 
 __all__ = [
     "ATTACK_POLICIES",
@@ -36,19 +34,23 @@ __all__ = [
     "DEFAULT_ATTACK_POLICY",
     "DEFAULT_FALSE_POSITIVE_RATE",
     "DEFAULT_ID_SET",
-    "DEFAULT_MONITOR_MODEL",
-    "DEFAULT_MONITOR_SAMPLES",
+    "DEFAULT_MONITOR_SETTING",
     "DEFAULT_SIDE_TASK",
     "EVAL_VERSION",
     "HYBRID_ACTION_WEIGHT",
     "ID_SETS",
-    "REASONING_EFFORTS",
+    "MONITOR_SAMPLES",
+    "REPLIES_KEY",
     "SIDE_TASKS",
+    "SUBTLE_SIDE_TASKS",
+    "bigcodebench_side",
     "control_metrics",
     "cot_redhanded",
-    "cot_redhanded_monitor",
-    "cot_redhanded_scorer",
+    "generate_until_success",
     "load_cot_redhanded_dataset",
+    "monitor_solver",
     "record_to_sample",
-    "transcript_monitor_scorer",
+    "side_task_metrics",
+    "side_task_scorer",
+    "suspicion_scorer",
 ]

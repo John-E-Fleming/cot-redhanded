@@ -42,6 +42,7 @@ __all__ = [
     "ANNOTATED_SIDE_TASKS",
     "ATTACK_POLICIES",
     "SIDE_TASKS",
+    "SUBTLE_SIDE_TASKS",
     "AttackPolicyName",
     "SideTask",
     "SideTaskName",
@@ -119,6 +120,16 @@ _BY_NAME = {spec.name: spec for spec in _SPECS}
 SIDE_TASKS: tuple[SideTaskName, ...] = get_args(SideTaskName)
 if set(SIDE_TASKS) != set(_BY_NAME):
     raise AssertionError("SideTaskName and the side task specifications name different side tasks")
+
+#: The side tasks the paper calls subtle: those its action-only monitor catches less than half
+#: the time. The other six are non-subtle.
+SUBTLE_SIDE_TASKS: tuple[str, ...] = (
+    "complexity",
+    "defaultval",
+    "edgecase",
+    "longlines",
+    "varname",
+)
 
 #: The side tasks that need a per-problem test case and so cover only some problems.
 ANNOTATED_SIDE_TASKS: tuple[str, ...] = tuple(spec.name for spec in _SPECS if spec.annotated)

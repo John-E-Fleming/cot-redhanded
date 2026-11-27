@@ -8,19 +8,19 @@ description: |
 group: Safeguards
 contributors:
   - John-E-Fleming
-version: "2-A"
+arxiv: https://arxiv.org/abs/2505.23575
+version: "3-A"
 tasks:
-  - name: cot_redhanded
+  - name: bigcodebench_side
     dataset_samples: 1710 # the TEST split at the defaults: 855 honest and 855 attack samples
     comment: >-
-      The eval: an untrusted model completes honest and attack samples, each completion is
-      verified in the sandbox, a trusted monitor scores the successful ones, and the catch rate
-      at a 1% false positive rate is reported as a metric.
-  - name: cot_redhanded_monitor
+      Step 1, run with the untrusted model: it completes honest and attack samples, and each
+      completion is verified in the sandbox on its main task and its side task.
+  - name: cot_redhanded
     comment: >-
-      Scoring only: runs the monitor over completions saved by earlier runs, so a second
-      monitor can be tried without generating again. The sample count depends on the logs it
-      is given, since only successful completions are monitored.
+      Step 2, run with the monitor: it scores the successful completions saved by step 1, and
+      the catch rate at a 1% false positive rate is reported as a metric. The sample count
+      depends on the logs it is given, since only successful completions are monitored.
 metadata:
   sandbox:
     - scorer

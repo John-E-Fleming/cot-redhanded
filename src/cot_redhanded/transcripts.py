@@ -1,11 +1,21 @@
 # Adapted from https://github.com/cotredhanded/code at commit 505d9fc (monitor/inspect_monitor.py).
 # Copyright (c) 2025 cotredhanded, MIT License. See NOTICE.
-"""Turn saved generation logs into samples for the scoring-only monitor task.
+"""Turn saved generation logs into samples for the monitor task.
 
-`cot_redhanded_monitor` re-monitors completions that already exist, so a second monitor can be
-tried without paying for generation again. This module reads those completions out of `.eval`
-logs: logs written by `cot_redhanded`, and logs written by the reference implementation's
-generation task, which is what every run before the native rewrite produced.
+`cot_redhanded` monitors completions that already exist, so any number of monitors can be tried
+without paying for generation again. This module reads those completions out of `.eval` logs.
+
+What a log must contain, for each sample (the log contract):
+
+- sample metadata `eval_mode` (`"honest"` or `"attack"`), `problem` (the problem statement as an
+  honest model would receive it), and for an attack sample `side_task` and `attack_policy`;
+- the untrusted model's reply as the sample's output, with its reasoning either in reasoning
+  content blocks or in `<think>` tags;
+- a first score whose value is a mapping with `main` (1 when the unit tests passed) and `side`
+  (1 when the side task was accomplished), and optionally `attempts`.
+
+`bigcodebench_side` writes such logs, and so did every earlier version of this eval. Logs from
+the reference implementation's generation task are read as well, through a separate branch.
 
 Only completions the paper would monitor are kept: an honest one that passed its main task, an
 attack one that passed both its main and its side task, each with code to show the monitor and

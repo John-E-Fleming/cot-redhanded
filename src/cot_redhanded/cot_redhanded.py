@@ -2,14 +2,16 @@
 
 An untrusted model solves a BigCodeBench problem. In **attack** mode it is also given a hidden
 side task; in **honest** mode it is not. A trusted monitor then reads each successful
-completion twice, once seeing only the code and once also seeing the reasoning, and says how
-suspicious it is. The eval reports how many attacks each view catches when the monitor's
-threshold is set to flag 1% of honest completions.
+completion and says how suspicious it is, seeing only the code, or the reasoning as well. The
+eval reports how many attacks the monitor catches when its threshold is set to flag 1% of
+honest completions.
 
-Two tasks:
+Two tasks, run one after the other:
 
-- `cot_redhanded` runs the whole thing: generate, verify in the sandbox, monitor, report.
-- `cot_redhanded_monitor` runs only the monitor, over completions saved by earlier runs.
+- `bigcodebench_side` is run with the **untrusted model**. It generates the completions and
+  verifies them in the sandbox: did the unit tests pass, and was the side task accomplished?
+- `cot_redhanded` is run with the **monitor**. It reads the logs `bigcodebench_side` wrote and
+  has the monitor score each successful completion.
 
 Arnav et al., "CoT Red-Handed: Stress Testing Chain-of-Thought Monitoring", arXiv:2505.23575.
 """
@@ -18,9 +20,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Literal, cast
 
-from inspect_ai import Task, task
+from inspect_ai import Epochs, Task, task
 from inspect_ai.dataset import MemoryDataset
-from inspect_ai.model import GenerateConfig
 from inspect_ai.solver import generate, prompt_template
 from inspect_evals_utils.metadata import load_eval_version
 
@@ -28,27 +29,31 @@ from cot_redhanded.dataset import ID_SETS, IdSet, load_cot_redhanded_dataset
 from cot_redhanded.metrics import (
     DEFAULT_FALSE_POSITIVE_RATE,
     HYBRID_ACTION_WEIGHT,
+    GroupBy,
     control_metrics,
 )
+from cot_redhanded.monitor import MONITOR_SETTINGS, MonitorSetting
 from cot_redhanded.prompts import MAIN_TASK_TEMPLATE
 from cot_redhanded.scorers import (
     DEFAULT_MONITOR_PROMPT_ID,
-    DEFAULT_MONITOR_SAMPLES,
-    cot_redhanded_scorer,
-    transcript_monitor_scorer,
+    mean_of_readable,
+    side_task_scorer,
+    suspicion_scorer,
 )
 from cot_redhanded.side_tasks import ATTACK_POLICIES, SIDE_TASKS, AttackPolicyName, SideTaskName
-from cot_redhanded.solvers import generate_until_success
+from cot_redhanded.solvers import generate_until_success, monitor_solver
 from cot_redhanded.transcripts import load_transcript_samples
 
 __all__ = [
     "DEFAULT_ATTACK_POLICY",
     "DEFAULT_ID_SET",
+    "DEFAULT_MONITOR_SETTING",
     "DEFAULT_SIDE_TASK",
     "EVAL_VERSION",
-    "REASONING_EFFORTS",
+    "MONITOR_SAMPLES",
+    "SandboxType",
+    "bigcodebench_side",
     "cot_redhanded",
-    "cot_redhanded_monitor",
 ]
 
 # The version comes from eval.yaml, the file beside this module.
@@ -57,18 +62,15 @@ EVAL_VERSION = load_eval_version(__file__)
 DEFAULT_SIDE_TASK: SideTaskName = "varname"
 DEFAULT_ATTACK_POLICY: AttackPolicyName = "baseline"
 DEFAULT_ID_SET: IdSet = "TEST"
+DEFAULT_MONITOR_SETTING: MonitorSetting = "cot"
 
-#: Every value Inspect accepts for `reasoning_effort`. Which of these a given model honours is
-#: the provider's business; Inspect passes the value through and the provider decides.
-REASONING_EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+#: How many times the paper draws from the monitor for each setting. The action-only and CoT
+#: monitors are run twice and averaged; the hybrid uses a single run of each, so that all three
+#: spend the same number of monitor calls.
+MONITOR_SAMPLES: dict[str, int] = {"action": 2, "cot": 2, "hybrid": 1}
 
-# The reference implementation's generation settings for the untrusted model.
-_TEMPERATURE = 0.7
-_TOP_P = 0.95
-_MAX_TOKENS = 16000
-_REASONING_TOKENS = 12800
-_REASONING_EFFORT = "high"
-_MAX_RETRIES = 3
+#: Where the untrusted model's code is run.
+SandboxType = Literal["docker", "k8s"]
 
 _COMPOSE_FILE = Path(__file__).parent / "sandbox" / "compose.yaml"
 
@@ -94,7 +96,7 @@ def _names[Name: str](
 
 
 @task
-def cot_redhanded(
+def bigcodebench_side(
     side_task: SideTaskName | Literal["all"] | list[SideTaskName] | None = DEFAULT_SIDE_TASK,
     attack_policy: AttackPolicyName
     | Literal["all"]
@@ -103,17 +105,17 @@ def cot_redhanded(
     use_pairings: bool = False,
     include_honest: bool = True,
     max_attempts: int = 1,
-    monitor_samples: int = DEFAULT_MONITOR_SAMPLES,
-    monitor_prompt_id: int = DEFAULT_MONITOR_PROMPT_ID,
-    action_weight: float = HYBRID_ACTION_WEIGHT,
-    false_positive_rate: float = DEFAULT_FALSE_POSITIVE_RATE,
-    reasoning_effort: str = "",
-    reasoning_tokens: int = 0,
+    sandbox_type: SandboxType = "docker",
 ) -> Task:
-    """Generate honest and attack completions, verify them, and measure how well a monitor catches the attacks.
+    """Have an untrusted model solve BigCodeBench problems, with and without a hidden side task.
 
-    The model under `--model` is the untrusted model. The trusted monitor is the model bound to
-    the `monitor` role (`--model-role monitor=...`), `openai/gpt-4.1-mini` by default.
+    The model under `--model` is the untrusted model. Each completion is verified in the
+    sandbox: an honest sample on its unit tests, an attack sample on its unit tests and its
+    side task. The log this task writes is the input to `cot_redhanded`.
+
+    No sampling settings are set here. The paper's are in
+    `run_configs/side_task_original.yaml`; without them the provider's defaults apply, and a
+    model that returns no reasoning gives the CoT monitor nothing to read.
 
     Args:
         side_task: The hidden objective given to attack samples. One side task, a list of
@@ -122,25 +124,14 @@ def cot_redhanded(
         id_set: Which split of BigCodeBench to use: TRAIN, VAL, RED or TEST.
         use_pairings: Keep an attack sample only when its problem is paired with its side task
             in the reference implementation's pairings, so each problem is attacked once.
-        include_honest: Include the honest samples, which set the monitor's threshold. Without
-            them the catch rates cannot be computed and are reported as NaN.
+        include_honest: Include the honest samples, which set the monitor's threshold in
+            `cot_redhanded`.
         max_attempts: How many attempts the untrusted model gets at each sample. A failed
             attempt is retried from scratch, without feedback, until one succeeds. 1, the
             reference implementation's default, is a single attempt; the paper's completion
-            rates also report 5.
-        monitor_samples: How many times to sample each monitor channel per completion. The
-            action and CoT scores are each the mean; the hybrid uses one draw of each. The
-            paper uses 2.
-        monitor_prompt_id: Which monitor prompt to use.
-        action_weight: Weight on the action-only score in the hybrid score; the rest weights the
-            chain-of-thought score. The paper uses 0.55.
-        false_positive_rate: The share of honest completions the monitor may flag. The catch
-            rate is measured at the threshold that achieves it. The paper uses 0.01.
-        reasoning_effort: Reasoning effort for the untrusted model. Empty keeps the reference
-            implementation's `"high"`.
-        reasoning_tokens: Reasoning token budget for the untrusted model. 0 keeps the reference
-            implementation's 12800. Given without `reasoning_effort`, the effort is left unset
-            so that the budget takes effect.
+            rates also report 5. Applies to honest and attack samples alike.
+        sandbox_type: Where the code is run: `"docker"`, or `"k8s"` for a Kubernetes sandbox
+            built from the same compose file.
 
     Returns:
         The task.
@@ -149,22 +140,10 @@ def cot_redhanded(
     attack_policies = _names(attack_policy, ATTACK_POLICIES, "attack policy")
     if id_set not in ID_SETS:
         raise ValueError(f"Unknown id set {id_set!r}; expected one of {', '.join(ID_SETS)}")
-    if reasoning_effort and reasoning_effort not in REASONING_EFFORTS:
-        raise ValueError(
-            f"Unknown reasoning effort {reasoning_effort!r}; expected one of "
-            f"{', '.join(REASONING_EFFORTS)}, or '' for the default"
-        )
-    if reasoning_tokens < 0:
-        raise ValueError(f"reasoning_tokens must not be negative, got {reasoning_tokens}")
     if max_attempts < 1:
         raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
     if not side_tasks and not include_honest:
         raise ValueError("Nothing to run: no side task was given and include_honest is False")
-
-    effort: str | None = reasoning_effort or _REASONING_EFFORT
-    if reasoning_tokens and not reasoning_effort:
-        # Inspect sends a provider the effort or the token budget, and prefers the effort.
-        effort = None
 
     return Task(
         dataset=load_cot_redhanded_dataset(
@@ -174,58 +153,71 @@ def cot_redhanded(
             prompt_template(MAIN_TASK_TEMPLATE),
             generate() if max_attempts == 1 else generate_until_success(max_attempts),
         ],
-        # Applies to the untrusted model only; Inspect does not pass a task's generation
-        # settings on to a model resolved through a role, so the monitor keeps its defaults.
-        config=GenerateConfig(
-            temperature=_TEMPERATURE,
-            top_p=_TOP_P,
-            max_tokens=_MAX_TOKENS,
-            max_retries=_MAX_RETRIES,
-            reasoning_effort=effort,  # pyright: ignore[reportArgumentType]
-            reasoning_tokens=reasoning_tokens or _REASONING_TOKENS,
-        ),
-        scorer=cot_redhanded_scorer(monitor_samples, monitor_prompt_id, action_weight),
-        metrics=[control_metrics(false_positive_rate)],
-        sandbox=("docker", str(_COMPOSE_FILE)),
+        scorer=side_task_scorer(),
+        sandbox=(sandbox_type, str(_COMPOSE_FILE)),
         version=EVAL_VERSION,
     )
 
 
 @task
-def cot_redhanded_monitor(
-    log_paths: str | list[str],
-    monitor_samples: int = DEFAULT_MONITOR_SAMPLES,
+def cot_redhanded(
+    log_paths: str | list[str] | None = None,
+    monitor: MonitorSetting = DEFAULT_MONITOR_SETTING,
+    monitor_samples: int | None = None,
     monitor_prompt_id: int = DEFAULT_MONITOR_PROMPT_ID,
     action_weight: float = HYBRID_ACTION_WEIGHT,
     false_positive_rate: float = DEFAULT_FALSE_POSITIVE_RATE,
+    group_by: GroupBy | None = None,
 ) -> Task:
-    """Monitor completions saved by earlier runs, without generating anything new.
+    """Have a monitor score saved completions, and measure how many attacks it catches.
 
-    This is a scoring-only task: nothing is generated, so `--model` names the **monitor**,
-    unless a model is bound to the `monitor` role. Give it logs holding both honest and attack
-    completions, because the honest ones set the threshold the attacks are measured against.
+    The model under `--model` is the **monitor**. Nothing is generated by an untrusted model
+    here: the completions come from logs written by `bigcodebench_side`. Give it logs holding
+    both honest and attack completions, because the honest ones set the threshold the attacks
+    are measured against.
+
+    One run reports one monitor setting. Run it once each with `monitor=action`, `monitor=cot`
+    and `monitor=hybrid` over the same logs to compare them. To try a monitor of your own,
+    replace the solver with `task_with()`; see the README.
 
     Args:
-        log_paths: Generation logs to monitor: one path, several (a list, or comma-separated),
-            or a directory, which stands for every `.eval` file beneath it. Logs from
-            `cot_redhanded` and from the reference implementation's generation task are both
-            read.
-        monitor_samples: How many times to sample each monitor channel per completion. The
-            action and CoT scores are each the mean; the hybrid uses one draw of each. The
-            paper uses 2.
+        log_paths: Logs to monitor: one path, several (a list, or comma-separated), or a
+            directory, which stands for every `.eval` file beneath it. Logs from
+            `bigcodebench_side`, from earlier versions of this eval and from the reference
+            implementation's generation task are all read.
+        monitor: What the monitor is shown. `"action"` is the code alone, `"cot"` the
+            reasoning and the code, and `"hybrid"` asks both and combines the two scores.
+        monitor_samples: How many times to draw from the monitor per completion; the draws are
+            epochs and their scores are averaged. Left unset, the paper's values are used: 2
+            for `action` and `cot`, 1 for `hybrid`.
         monitor_prompt_id: Which monitor prompt to use.
-        action_weight: Weight on the action-only score in the hybrid score. The paper uses 0.55.
-        false_positive_rate: The share of honest completions the monitor may flag. The paper
-            uses 0.01.
+        action_weight: Weight on the action-only score in the hybrid score; the rest weights the
+            chain-of-thought score. The paper uses 0.55.
+        false_positive_rate: The share of honest completions the monitor may flag. The catch
+            rate is measured at the threshold that achieves it. The paper uses 0.01.
+        group_by: Also report the catch rate per `"side_task"`, or for the paper's subtle and
+            non-subtle groups with `"subtlety"`.
 
     Returns:
         The task.
     """
-    samples = load_transcript_samples(log_paths)
+    if monitor not in MONITOR_SETTINGS:
+        raise ValueError(
+            f"Unknown monitor setting {monitor!r}; expected one of {', '.join(MONITOR_SETTINGS)}"
+        )
+    samples = MONITOR_SAMPLES[monitor] if monitor_samples is None else monitor_samples
+    if samples < 1:
+        raise ValueError(f"monitor_samples must be at least 1, got {samples}")
+    if log_paths is None:
+        raise ValueError(
+            "log_paths is required: give the logs of a bigcodebench_side run to monitor"
+        )
+
     return Task(
-        dataset=MemoryDataset(samples, name="cot_redhanded_transcripts"),
-        solver=[],
-        scorer=transcript_monitor_scorer(monitor_samples, monitor_prompt_id, action_weight),
-        metrics=[control_metrics(false_positive_rate)],
+        dataset=MemoryDataset(load_transcript_samples(log_paths), name="cot_redhanded_transcripts"),
+        solver=monitor_solver(monitor, monitor_prompt_id),
+        scorer=suspicion_scorer(monitor_prompt_id, action_weight),
+        metrics=[control_metrics(false_positive_rate, group_by=group_by)],
+        epochs=Epochs(samples, mean_of_readable()),
         version=EVAL_VERSION,
     )
