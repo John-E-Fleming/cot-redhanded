@@ -7,24 +7,24 @@ This repo holds one Inspect AI evaluation, `cot-redhanded`, as the Python packag
 This project uses `uv`. Do not use `pip`, bare `python` or bare `pytest`.
 
 - `uv sync` installs the project and its dev dependencies.
-- `uv run inspect eval cot_redhanded/cot_redhanded --model <provider/model>` runs the eval. `--limit N` runs N samples.
+- `uv run inspect eval cot_redhanded/bigcodebench_side --model <untrusted model>` generates and verifies completions; `uv run inspect eval cot_redhanded/cot_redhanded --model <monitor> -T log_paths=<logs>` monitors them. `--limit N` runs N samples.
 - `make test` runs the tests. Slow tests need `uv run pytest --runslow`.
 - `make check` runs every check CI runs.
 - `make readmes` regenerates the README sections that come from `eval.yaml` and the task signatures.
 
 ## Layout
 
-- `src/cot_redhanded/cot_redhanded.py`: the two tasks, `cot_redhanded` and `cot_redhanded_monitor`, and the version read from `eval.yaml`.
+- `src/cot_redhanded/cot_redhanded.py`: the two tasks, `bigcodebench_side` (the untrusted model generates, the scorer verifies) and `cot_redhanded` (the monitor scores saved completions), and the version read from `eval.yaml`.
 - `src/cot_redhanded/dataset.py`: loads BigCodeBench and builds honest and attack samples (`record_to_sample`).
 - `src/cot_redhanded/prompts.py`: every prompt, as constants. The texts are the reference implementation's; a test holds their digest.
 - `src/cot_redhanded/side_tasks.py`, `verifiers.py`: the eleven side tasks and the sandbox check for each.
 - `src/cot_redhanded/extraction.py`: pulls the code and the reasoning out of a completion.
-- `src/cot_redhanded/monitor.py`, `scorers.py`: the monitor calls and the scorers that use them.
-- `src/cot_redhanded/solvers.py`: the retry loop used when `max_attempts` is above 1.
-- `src/cot_redhanded/metrics.py`: `control_metrics` (catch rate at a fixed false positive rate, AUC) and its arithmetic. `analysis.py` is a command-line wrapper over it for saved logs.
-- `src/cot_redhanded/transcripts.py`: reads saved generation logs for `cot_redhanded_monitor`.
+- `src/cot_redhanded/monitor.py`, `scorers.py`: the monitor's prompts and the reading of its replies, and the two scorers. No scorer calls a model.
+- `src/cot_redhanded/solvers.py`: the retry loop used when `max_attempts` is above 1, and `monitor_solver`, which is where the monitor is called.
+- `src/cot_redhanded/metrics.py`: `control_metrics` (catch rate at a fixed false positive rate with a bootstrap interval, AUC, grouping) for the monitor task, `side_task_metrics` for the generation task, and their arithmetic. `analysis.py` is a command-line tool for saved logs.
+- `src/cot_redhanded/transcripts.py`: reads saved generation logs for `cot_redhanded`, and states what such a log must contain.
 - `src/cot_redhanded/data/`, `sandbox/`: data files, and the Docker sandbox the code runs in.
-- `src/cot_redhanded/run_configs/original.yaml`: the paper's design as an Inspect run config, with the source of each value.
+- `src/cot_redhanded/run_configs/side_task_original.yaml`, `original.yaml`: the paper's design as two Inspect run configs, one per task, with the source of each value. Sampling settings live here, not in the tasks.
 - `src/cot_redhanded/eval.yaml`: title, description, contributors, version and tasks. Edit it and run `make readmes`.
 - `src/cot_redhanded/README.md`: the eval's documentation, including the generated sections.
 - `docs/architecture.png`: the architecture diagram shown in the eval's README.
