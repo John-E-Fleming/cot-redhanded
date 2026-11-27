@@ -1,10 +1,36 @@
-title: "cot-redhanded"
+title: "CoT Red-Handed: Stress Testing Chain-of-Thought Monitoring"
 description: |
-  Stress testing chain-of-thought monitoring
-group: Knowledge # pick the group used by the inspect_evals listing for this benchmark
+  Stress tests chain-of-thought monitoring as an AI control measure. A weaker trusted monitor reads a
+  stronger untrusted model's reasoning trace and final code to detect sabotage hidden alongside a
+  legitimate coding task, and is compared against an action-only monitor that sees the code alone and
+  a hybrid protocol that scores reasoning and actions independently before combining them. Monitors
+  are compared by catch rate at a 1% false positive rate, calibrated against benign completions.
+group: Safeguards
 contributors:
   - John-E-Fleming
-version: "1-A"
+arxiv: https://arxiv.org/abs/2505.23575
+version: "3-A"
 tasks:
+  - name: bigcodebench_side
+    dataset_samples: 1710 # the TEST split at the defaults: 855 honest and 855 attack samples
+    comment: >-
+      Step 1, run with the untrusted model: it completes honest and attack samples, and each
+      completion is verified in the sandbox on its main task and its side task.
   - name: cot_redhanded
-    dataset_samples: 2
+    comment: >-
+      Step 2, run with the monitor: it scores the successful completions saved by step 1, and
+      the catch rate at a 1% false positive rate is reported as a metric. The sample count
+      depends on the logs it is given, since only successful completions are monitored.
+metadata:
+  sandbox:
+    - scorer
+  requires:
+    internet: true
+external_assets:
+  - type: huggingface
+    source: bigcode/bigcodebench
+    fetch_method: load_dataset
+    state: pinned
+    comment: >-
+      Main-task coding problems, release v0.1.4, pinned to revision
+      b74c0d0bf70d2c0bc459be537895cca163007f1a.

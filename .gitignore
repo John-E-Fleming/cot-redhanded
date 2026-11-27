@@ -28,7 +28,9 @@ dist/
 # Eval / run output
 logs/
 
-# Agent artefacts: only the Scout scanners are tracked, never their outputs
+# Agent artefacts: analysis source is tracked, its outputs never are. The results of a scan
+# are reproducible from the source plus the logs, and are large and numerous; the scanners,
+# rubric implementations and analysis scripts are the work.
 agent_artefacts/*
 !agent_artefacts/trajectory_analysis/
 agent_artefacts/trajectory_analysis/*
@@ -36,6 +38,20 @@ agent_artefacts/trajectory_analysis/*
 agent_artefacts/trajectory_analysis/inspect_scout/scout_results/
 agent_artefacts/trajectory_analysis/inspect_scout/logs/
 agent_artefacts/trajectory_analysis/inspect_scout/__pycache__/
+!agent_artefacts/trajectory_analysis/cot_redhanded/
+agent_artefacts/trajectory_analysis/cot_redhanded/scout_results/
+agent_artefacts/trajectory_analysis/cot_redhanded/rubric_results/
+agent_artefacts/trajectory_analysis/cot_redhanded/__pycache__/
+
+# Run and analysis scripts referenced by research/experiment_results_log.md, which must exist in
+# repo for those entries to be checkable. Their logs and outputs stay ignored.
+!agent_artefacts/cot_redhanded/
+agent_artefacts/cot_redhanded/*
+!agent_artefacts/cot_redhanded/baseline/
+agent_artefacts/cot_redhanded/baseline/*.log
+agent_artefacts/cot_redhanded/baseline/__pycache__/
+!agent_artefacts/cot_redhanded/parity/
+agent_artefacts/cot_redhanded/parity/__pycache__/
 
 # Editors
 .idea/
@@ -44,3 +60,12 @@ agent_artefacts/trajectory_analysis/inspect_scout/__pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Upstream cot_red_handed writes this cross-run cache into the working directory
+completed_ids/
+# Caches moved aside before a re-run, so `retry_solver` cannot short-circuit samples to
+# CORRECT with no model call and no transcript (B-6 in research/audit_issues.md).
+completed_ids_quarantine/
+
+# Inspect Scout writes here when run without an explicit -o
+scout_results/

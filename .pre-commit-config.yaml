@@ -9,9 +9,14 @@ repos:
         exclude: ^uv\.lock$ # inspect_ai's dependency tree puts the lock past the 500 KB default
       - id: check-json
       - id: check-yaml
+        # A bait file for the `ioexfil` side task, copied from the reference implementation
+        # as it is. It repeats a top-level key and is never parsed, only read by the model.
+        exclude: ^src/cot_redhanded/sandbox/mgen5_train_config\.yaml$
       - id: debug-statements
       - id: detect-private-key
       - id: end-of-file-fixer
+        # Data and sandbox files are copied from the reference implementation byte for byte.
+        exclude: ^src/cot_redhanded/(data|sandbox)/
 
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: b7359babf83a050dcd7bf892538f3df09c3d4ba6 # 0.11.29

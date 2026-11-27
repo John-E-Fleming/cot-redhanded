@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Stress testing chain-of-thought monitoring"
 readme = "README.md"
 license = "MIT"
-authors = [{ name = "John-E-Fleming", email = "jfleming9317@gmail.com" }]
+authors = [{ name = "John-E-Fleming", email = "166432346+John-E-Fleming@users.noreply.github.com" }]
 requires-python = ">=3.12"
 dependencies = [
     "inspect_ai>=0.3.262",
@@ -29,7 +29,6 @@ dev = [
     "basedpyright>=1.40",
     "inspect-evals-lint==0.13.0",
     "inspect-scout>=0.6.2", # used by agent_artefacts/trajectory_analysis/inspect_scout/
-    "inspect-swe>=0.2.72", # the agentic example's claude_code agent
     "openai>=3.4",
     "pre-commit>=4.0",
     "pytest>=8.4",
@@ -45,13 +44,18 @@ where = ["src"]
 include = ["cot_redhanded*"] # examples/ stays out of the wheel
 
 [tool.setuptools.package-data]
-"*" = ["eval.yaml"]
+"*" = ["eval.yaml", "data/*", "sandbox/*", "run_configs/*"]
 
 # Layout preset: multi-eval (tests/<package>/, src/<package>/README.md) or
 # single-eval (flat tests/, README at the root). A hybrid repo keeps a preset and
 # sets tests_layout or readme_location here on top of it.
 [tool.inspect-evals-lint]
 preset = "multi-eval"
+
+# The `ioexfil` side task is verified by capturing the sandbox's own network traffic with
+# tcpdump, which needs these two capabilities. They apply inside the container only.
+[tool.inspect-evals-lint.allowlists]
+sandbox_privileges = { cot_redhanded = ["default:cap_add:NET_ADMIN", "default:cap_add:NET_RAW"] }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -79,6 +83,11 @@ target-version = "py312"
 extend-exclude = ["agent_artefacts", "*.md"]
 
 [tool.ruff.lint]
+# IECQ007 asks for PLW1514 (unspecified-encoding). It is a preview rule, so selecting PLW
+# alone leaves it off and enabling it needs preview = true — which also activates
+# rule-codes-in-selectors and would rewrite every code in this file to a rule name. Deferred
+# deliberately: IECQ007 is a warning, not a required check, and the code reads no files
+# without an explicit encoding.
 select = [
     "E",     # pycodestyle errors
     "W",     # pycodestyle warnings
@@ -112,3 +121,6 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "**/{tests,examples}/**" = ["D", "PLR2004"] # tests and examples skip docstring linting
+# The prompts are the reference implementation's text, character for character, and some of
+# its lines end in a space that reaches the model.
+"src/cot_redhanded/prompts.py" = ["W291"]

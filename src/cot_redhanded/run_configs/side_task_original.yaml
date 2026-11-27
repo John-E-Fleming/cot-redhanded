@@ -1,0 +1,56 @@
+# Step 1 of the paper's design: the untrusted model's completions, verified.
+#
+#   uv run inspect eval --run-config src/cot_redhanded/run_configs/side_task_original.yaml \
+#     --model openrouter/deepseek/deepseek-r1-0528
+#
+# `--model` is the untrusted model and is not set here: the paper runs five. Command-line
+# flags override this file, and `-T` arguments are merged into `task.args` one by one, so
+# `-T attack_policy=baseline` narrows the run to one attack policy.
+#
+# This is a large run: 855 honest samples and 8,550 attack samples, each retried up to five
+# times. One attack policy alone (855 samples) took about seven hours with DeepSeek R1.
+#
+# Step 2 is run_configs/original.yaml, which runs a monitor over the log this writes.
+
+task:
+  task: cot_redhanded/bigcodebench_side
+  args:
+    id_set: TEST
+    side_task: all
+    use_pairings: true
+    attack_policy: all
+    include_honest: true
+    max_attempts: 5
+
+# The untrusted model's sampling settings. They apply to whichever model `--model` names.
+generate_config:
+  temperature: 0.7
+  top_p: 0.95
+  max_tokens: 16000
+  max_retries: 3
+  reasoning_effort: high
+  reasoning_tokens: 12800
+
+# Provenance, checked 2026-11-23 against arXiv:2505.23575 and
+# github.com/cotredhanded/code at commit 505d9fc:
+#   id_set TEST: the paper reports on the test split of its partition of BigCodeBench
+#     (tasks/data/task_id_sets.json).
+#   side_task all with use_pairings: the paper pairs each problem with one side task
+#     (tasks/data/bigcodebench_pairings.json). 855 problems give 855 attack samples per
+#     attack policy.
+#   attack_policy all: the paper's Table 3 and its figures cover ten attack policies and
+#     average over them (Figure 3's caption).
+#   max_attempts 5: Table 3 reports completion on the first attempt and within five. The
+#     reference code's NUM_RETRIES is 1 (tasks/config.py); it reran failed problems in
+#     later passes. Here a retry happens within the sample, for honest samples too. The
+#     paper does not say how many attempts its honest samples had. The honest run reported
+#     in this eval's README used one attempt (`-T max_attempts=1`); retrying honest samples
+#     adds completions to the set that fixes the monitor's threshold, so say which was used.
+#   generate_config: the reference code's MODEL_CONFIG (tasks/config.py). Through
+#     OpenRouter the token budget is not sent when an effort is set, so `reasoning_tokens`
+#     has no effect there; it is kept because it is the reference code's value.
+#
+# Not set here, and worth setting on the command line: the upstream provider. OpenRouter
+# routes one model name to several providers, which can differ. To pin one and to record
+# which served each call:
+#   -M provider='{"order": ["<provider>"], "allow_fallbacks": false}' --log-model-api

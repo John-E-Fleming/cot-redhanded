@@ -7,25 +7,59 @@ This repo holds one Inspect AI evaluation, `cot-redhanded`, as the Python packag
 This project uses `uv`. Do not use `pip`, bare `python` or bare `pytest`.
 
 - `uv sync` installs the project and its dev dependencies.
-- `uv run inspect eval cot_redhanded/cot_redhanded --model <provider/model>` runs the eval. `--limit N` runs N samples.
+- `uv run inspect eval cot_redhanded/bigcodebench_side --model <untrusted model>` generates and verifies completions; `uv run inspect eval cot_redhanded/cot_redhanded --model <monitor> -T log_paths=<logs>` monitors them. `--limit N` runs N samples.
 - `make test` runs the tests. Slow tests need `uv run pytest --runslow`.
 - `make check` runs every check CI runs.
 - `make readmes` regenerates the README sections that come from `eval.yaml` and the task signatures.
 
 ## Layout
 
-- `src/cot_redhanded/cot_redhanded.py`: the task, `record_to_sample`, and the version read from `eval.yaml`.
+- `src/cot_redhanded/cot_redhanded.py`: the two tasks, `bigcodebench_side` (the untrusted model generates, the scorer verifies) and `cot_redhanded` (the monitor scores saved completions), and the version read from `eval.yaml`.
+- `src/cot_redhanded/dataset.py`: loads BigCodeBench and builds honest and attack samples (`record_to_sample`).
+- `src/cot_redhanded/prompts.py`: every prompt, as constants. The texts are the reference implementation's; a test holds their digest.
+- `src/cot_redhanded/side_tasks.py`, `verifiers.py`: the eleven side tasks and the sandbox check for each.
+- `src/cot_redhanded/extraction.py`: pulls the code and the reasoning out of a completion.
+- `src/cot_redhanded/monitor.py`, `scorers.py`: the monitor's prompts and the reading of its replies, and the two scorers. No scorer calls a model.
+- `src/cot_redhanded/solvers.py`: the retry loop used when `max_attempts` is above 1, and `monitor_solver`, which is where the monitor is called.
+- `src/cot_redhanded/metrics.py`: `control_metrics` (catch rate at a fixed false positive rate with a bootstrap interval, AUC, grouping) for the monitor task, `side_task_metrics` for the generation task, and their arithmetic. `analysis.py` is a command-line tool for saved logs.
+- `src/cot_redhanded/transcripts.py`: reads saved generation logs for `cot_redhanded`, and states what such a log must contain.
+- `src/cot_redhanded/data/`, `sandbox/`: data files, and the Docker sandbox the code runs in.
+- `src/cot_redhanded/run_configs/side_task_original.yaml`, `original.yaml`: the paper's design as two Inspect run configs, one per task, with the source of each value. Sampling settings live here, not in the tasks.
 - `src/cot_redhanded/eval.yaml`: title, description, contributors, version and tasks. Edit it and run `make readmes`.
 - `src/cot_redhanded/README.md`: the eval's documentation, including the generated sections.
+- `docs/architecture.png`: the architecture diagram shown in the eval's README.
 - `tests/cot_redhanded/`: the tests.
-- `src/examples/`: worked examples (gpqa, agentic). They are not part of the eval. Run one by file path: `uv run inspect eval src/examples/<name>/<name>.py`. Remove them with `uvx copier update --defaults --data include_examples=false` followed by `uv sync`.
 - `agent_artefacts/trajectory_analysis/inspect_scout/`: Scout scanners for the transcript audit.
+- `agent_artefacts/cot_redhanded/parity/`: the scripts that compared this implementation with the reference one, and wrote `tests/cot_redhanded/fixtures/`.
 
 ## Checks
 
 `make check` runs ruff (lint and format), basedpyright in standard mode, inspect-evals-lint, `inspect-evals-readmes generate --check` and the pre-commit stack (zizmor, actionlint, mdformat). CI runs the same through python-project-template's shared workflow plus `eval-checks.yml`.
 
 Tests must be deterministic and must not reach the network unless marked: use `mockllm/model` for model output, `unittest.mock` for external services and `tmp_path` for files. Mark tests that download datasets with `@pytest.mark.dataset_download`, that need Docker with `@pytest.mark.docker`, and that take long with `@pytest.mark.slow`. Add `@pytest.mark.huggingface` to a test that calls the Hugging Face Hub, so a test that downloads a dataset from the Hub carries both markers. Tests marked `huggingface` run when `HF_TOKEN` is unset, which includes CI, and the test summary then says how many ran without authentication.
+
+## Scout View and the space in this repo's path
+
+This project lives under `.../Generality Labs/extension programme/...`. **Scout View cannot resolve a path containing a space**, so scans or transcripts addressed through the project path are invisible to it — the viewer shows an empty list, with no error, while the scan itself succeeded and the parquet files are on disk.
+
+The tell-tale is that everything *except* the viewer works: `scout scan list <dir>` finds the scans and the HTTP API returns them. That means path resolution, not a scan failure.
+
+So both locations live outside the project, and `scout.yaml` points at them absolutely:
+
+- `~/scout_scans/cot-redhanded` — scan results (a real directory)
+- `~/cot-redhanded-eval` — a symlink to this repo, so `logs/` resolves without spaces
+
+Recreate them if the symlink dangles or the directory is lost:
+
+```bash
+mkdir -p ~/scout_scans && ln -s "$PWD" ~/cot-redhanded-eval
+```
+
+Three further gotchas:
+
+- `scout view` opens on Project Settings or Transcripts. **Click SCANS in the left icon rail.**
+- Scout View's **Project Settings page edits `scout.yaml`**. Opening and saving it rewrites the Locations with whatever the form holds; it has already replaced the scans path with `./scans` once. Comments survive, values do not.
+- The Inspect AI VS Code extension hides its entire Scout activity bar behind `inspect_ai.inspect_scout.installed`, resolved against the **selected Python interpreter**. `inspect_scout` is only in `.venv`, so if VS Code picks another interpreter the Scout UI and every `Scout View:` command silently vanish. `.vscode/settings.json` pins the interpreter via `python.defaultInterpreterPath`; select it once and reload the window, since VS Code caches the current selection. That file is plain JSON, not JSONC, because the repo's `check-json` pre-commit hook rejects comments.
 
 ## Guides
 

@@ -2,14 +2,13 @@
 # Run `copier update` to pull in template changes.
 _commit: v2.0.0
 _src_path: gh:Generality-Labs/inspect-evals-template
-author_email: jfleming9317@gmail.com
+author_email: 166432346+John-E-Fleming@users.noreply.github.com
 author_name: John-E-Fleming
 eval_description: Stress testing chain-of-thought monitoring
 eval_name: cot-redhanded
 github_owner: John-E-Fleming
 github_username: John-E-Fleming
-include_examples: true
-include_llm_judge_example: false
+include_examples: false
 layout: multi-eval
 license: MIT
 python_version: '3.12'
